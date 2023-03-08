@@ -6,19 +6,11 @@ import (
 	"log"
 	"net/http"
 	"strings"
-
-	"github.com/jmoiron/sqlx"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 const (
-	hnApiBaseUri     = "https://hacker-news.firebaseio.com/v0"
-	jobStatusOk      = 1
-	jobStatusDead    = 2
-	jobStatusDeleted = 3
+	hnApiBaseUri = "https://hacker-news.firebaseio.com/v0"
 )
-
-var db = sqlx.MustConnect("sqlite3", "whoishiring.db")
 
 // getIndex will return the position of v in s
 func getIndex[K comparable](s []K, v K) int {
@@ -32,11 +24,11 @@ func getIndex[K comparable](s []K, v K) int {
 
 // newHiringStory will attempt to insert a new hiring story to our db.
 // Return the hacker news id.
-func newHiringStory(s []int) (int, error) {
+func newHiringStory(s []int) (uint64, error) {
 	type hiringStory struct {
-		Id    int    `json:"id"`
+		Id    uint64 `json:"id"`
 		Title string `json:"title"`
-		Time  int    `json:"time"`
+		Time  uint64 `json:"time"`
 	}
 
 	for _, sv := range s {
@@ -52,29 +44,15 @@ func newHiringStory(s []int) (int, error) {
 		}
 
 		if strings.HasPrefix(hs.Title, "Ask HN: Who is hiring?") {
-			sql := `INSERT INTO hiring_story (hn_id, title, time) VALUES (?, ?, ?)`
-			res := db.MustExec(sql, hs.Id, hs.Title, hs.Time)
-			_, err := res.LastInsertId()
+			hsId, err := CreateHiringStory(hs.Id, hs.Title, hs.Time)
 			if err != nil {
-				panic(err)
+				return 0, err
 			}
-			return hs.Id, nil
+			return hsId, nil
 		}
 	}
 
-	return -1, fmt.Errorf("could not add new hiring story from Ids %v", s)
-}
-
-func getStatus(dead bool, deleted bool) uint8 {
-	if dead {
-		return jobStatusDead
-	}
-
-	if deleted {
-		return jobStatusDeleted
-	}
-
-	return jobStatusOk
+	return 0, fmt.Errorf("could not add new hiring story from Ids %v", s)
 }
 
 // newHiringJob will attempt to fetch a job item from hacker news
@@ -97,19 +75,17 @@ func newHiringJob(hsid, hjid uint64) (uint64, error) {
 		return 0, err
 	}
 
-	sql := `INSERT INTO hiring_job (hn_id, hiring_story_id, text, time, status) VALUES (?, ?, ?, ?, ?)`
-	status := getStatus(hj.Dead, hj.Deleted)
-	res := db.MustExec(sql, hj.Id, hsid, hj.Text, hj.Time, status)
-	_, err = res.LastInsertId()
+	hjStatus := HiringJobStatus(hj.Dead, hj.Deleted)
+	_, err = CreateHiringJob(hj.Id, hsid, hj.Text, hj.Time, hjStatus)
 	if err != nil {
-		return 0, err
+		return 0, nil
 	}
 
 	return hjid, nil
 }
 
 // processJobPosts will attempt to fetch and process job items for a given hiring story
-func processJobPosts(hsid int) {
+func processJobPosts(hsid uint64) {
 	log.Printf("process jobs for hiring story id %d", hsid)
 	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hsid))
 	if err != nil {
@@ -124,12 +100,11 @@ func processJobPosts(hsid int) {
 		panic(err)
 	}
 
-	sql := `select hn_id from hiring_job where hiring_story_id=?`
-	rows, err := db.Query(sql, hsid)
+	var savedIds = make(map[uint64]bool)
+	rows, err := SelectHiringJobIds(int(hsid))
 	if err != nil {
 		panic(err)
 	}
-	var savedIds = make(map[uint64]bool)
 	for rows.Next() {
 		var hnid uint64
 		if err := rows.Scan(&hnid); err != nil {
@@ -175,15 +150,8 @@ func syncData() {
 	// The story id we want should be in the first three items
 	userStoryIds := userResp.StoryIds[0:3]
 
-	type hiringStory struct {
-		Id    int `db:"hn_id"`
-		Title string
-	}
-	var hs hiringStory
-
-	// Get the latest `who is hiring` story and check if the hn_id is in the user resp.
-	// If no results found, find the latest story from the user resp data.
-	if err := db.Get(&hs, "select hn_id, title from hiring_story order by time desc limit 1"); err != nil {
+	hsId, err := GetLatestHiringStory()
+	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Println("hiring story not found in db")
 		} else {
@@ -191,21 +159,40 @@ func syncData() {
 		}
 	}
 
-	idx := getIndex(userStoryIds, hs.Id)
-	var hsid int
+	idx := getIndex(userStoryIds, int(hsId))
+	var hsid uint64
 	if idx == -1 {
-		log.Printf("expected story id %d not found in %v. will update...", hs.Id, userStoryIds)
+		log.Printf("expected story id %d not found in %v. will update...", hsId, userStoryIds)
 		hsid, err = newHiringStory(userStoryIds)
 		if err != nil {
 			panic(err)
 		}
 	} else {
-		hsid = userStoryIds[idx]
+		hsid = uint64(userStoryIds[idx])
 	}
 
 	processJobPosts(hsid)
 }
 
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
+	hsId, err := GetLatestHiringStory()
+	if err != nil {
+		panic(err)
+	}
+
+	log.Printf("Found hiring story id %d", hsId)
+
+	fmt.Fprint(w, "hello.")
+}
+
 func main() {
-	syncData()
+	// syncData()
+
+	http.HandleFunc("/", indexHandler)
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
