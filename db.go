@@ -15,6 +15,11 @@ const (
 
 var db = sqlx.MustConnect("sqlite3", "whoishiring.db")
 
+type HiringStory struct {
+	HnId  uint64 `db:"hn_id"`
+	Title string
+}
+
 func HiringJobStatus(dead bool, deleted bool) uint8 {
 	if dead {
 		return jobStatusDead
@@ -49,17 +54,13 @@ func CreateHiringJob(hjId, hsId uint64, hjText string, hjTime uint64, hjStatus u
 	return hjId, nil
 }
 
-func GetLatestHiringStory() (uint64, error) {
-	type hiringStory struct {
-		HnId  uint64 `db:"hn_id"`
-		Title string
-	}
-	var hs hiringStory
+func GetLatestHiringStory() (*HiringStory, error) {
+	var hs HiringStory
 	if err := db.Get(&hs, "SELECT hn_id, title FROM hiring_story ORDER BY time DESC LIMIT 1"); err != nil {
-		return 0, err
+		return &hs, err
 	}
 
-	return hs.HnId, nil
+	return &hs, nil
 }
 
 func SelectHiringJobIds(hsId int) (*sql.Rows, error) {

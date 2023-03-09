@@ -150,7 +150,7 @@ func syncData() {
 	// The story id we want should be in the first three items
 	userStoryIds := userResp.StoryIds[0:3]
 
-	hsId, err := GetLatestHiringStory()
+	hs, err := GetLatestHiringStory()
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Println("hiring story not found in db")
@@ -159,10 +159,10 @@ func syncData() {
 		}
 	}
 
-	idx := getIndex(userStoryIds, int(hsId))
+	idx := getIndex(userStoryIds, int(hs.HnId))
 	var hsid uint64
 	if idx == -1 {
-		log.Printf("expected story id %d not found in %v. will update...", hsId, userStoryIds)
+		log.Printf("expected story id %d not found in %v. will update...", hs.HnId, userStoryIds)
 		hsid, err = newHiringStory(userStoryIds)
 		if err != nil {
 			panic(err)
@@ -180,12 +180,12 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hsId, err := GetLatestHiringStory()
+	hs, err := GetLatestHiringStory()
 	if err != nil {
 		panic(err)
 	}
 
-	log.Printf("Found hiring story id %d", hsId)
+	log.Printf("Found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
 	fmt.Fprint(w, "hello.")
 }
