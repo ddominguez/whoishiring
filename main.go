@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"text/template"
 )
 
 const (
@@ -185,9 +186,24 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		panic(err)
 	}
 
-	log.Printf("Found hiring story -- %s [%d]", hs.Title, hs.HnId)
+	log.Printf("found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
-	fmt.Fprint(w, "hello.")
+	hj, err := SelectNextHiringJob(hs.HnId, 0)
+	log.Printf("found hiring job [%d]", hj.HnId)
+
+	data := struct {
+		Story HiringStory
+		Job   HiringJob
+	}{
+		Story: *hs,
+		Job:   *hj,
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	tmpl := template.Must(template.ParseFiles("templates/base.html"))
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Println("failed to execute to templates", err)
+		return
+	}
 }
 
 func main() {

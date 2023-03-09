@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/mattn/go-sqlite3"
@@ -18,6 +19,12 @@ var db = sqlx.MustConnect("sqlite3", "whoishiring.db")
 type HiringStory struct {
 	HnId  uint64 `db:"hn_id"`
 	Title string
+}
+
+type HiringJob struct {
+	HnId uint64 `db:"hn_id"`
+	Text string
+	Time uint64
 }
 
 func HiringJobStatus(dead bool, deleted bool) uint8 {
@@ -71,4 +78,21 @@ func SelectHiringJobIds(hsId int) (*sql.Rows, error) {
 	}
 
 	return rows, nil
+}
+
+func SelectNextHiringJob(hsId uint64, hnTime uint64) (*HiringJob, error) {
+	var hj HiringJob
+	sql := `SELECT hn_id, text, time
+            FROM hiring_job
+            WHERE hiring_story_id=? and status=? and time < ?
+            ORDER BY time Desc
+            Limit 1`
+	if hnTime == 0 {
+		hnTime = uint64(time.Now().Unix())
+	}
+	if err := db.Get(&hj, sql, hsId, jobStatusOk, hnTime); err != nil {
+		return &hj, err
+	}
+
+	return &hj, nil
 }
