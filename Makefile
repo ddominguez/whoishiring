@@ -4,7 +4,7 @@ MIGRATIONS_DIR=./migrations
 .PHONY: run migrate-status migrate-up
 
 run:
-	go run main.go
+	go run .
 
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) sqlite3 $(DB_FILE) status
