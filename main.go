@@ -35,13 +35,13 @@ func newHiringStory(s []int) (uint64, error) {
 	for _, sv := range s {
 		resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", sv))
 		if err != nil {
-			panic(err)
+			return 0, err
 		}
 		defer resp.Body.Close()
 
 		var hs hiringStory
 		if err := json.NewDecoder(resp.Body).Decode(&hs); err != nil {
-			panic(err)
+			return 0, err
 		}
 
 		if strings.HasPrefix(hs.Title, "Ask HN: Who is hiring?") {
@@ -86,11 +86,11 @@ func newHiringJob(hsid, hjid uint64) (uint64, error) {
 }
 
 // processJobPosts will attempt to fetch and process job items for a given hiring story
-func processJobPosts(hsid uint64) {
+func processJobPosts(hsid uint64) error {
 	log.Printf("process jobs for hiring story id %d", hsid)
 	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hsid))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer resp.Body.Close()
 
@@ -98,18 +98,18 @@ func processJobPosts(hsid uint64) {
 		Kids []uint64 `json:"kids"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&hs); err != nil {
-		panic(err)
+		return err
 	}
 
 	var savedIds = make(map[uint64]bool)
 	rows, err := SelectHiringJobIds(int(hsid))
 	if err != nil {
-		panic(err)
+		return err
 	}
 	for rows.Next() {
 		var hnid uint64
 		if err := rows.Scan(&hnid); err != nil {
-			panic(err)
+			return err
 		}
 		savedIds[hnid] = true
 	}
@@ -121,16 +121,17 @@ func processJobPosts(hsid uint64) {
 		}
 		_, err := newHiringJob(uint64(hsid), v)
 		if err != nil {
-			log.Printf("failed to process hiring job id %d. %s", v, err)
-			continue
+			return err
 		}
 		log.Printf("added new hiring job %d", v)
 	}
+
+	return nil
 }
 
 // syncData will fetch the latest who is hiring story
 // insert new jobs from that story into our database.
-func syncData() {
+func syncData() error {
 	log.Println("starting data sync...")
 
 	type hnUserResp struct {
@@ -139,13 +140,13 @@ func syncData() {
 
 	resp, err := http.Get(hnApiBaseUri + "/user/whoishiring.json")
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer resp.Body.Close()
 
 	var userResp hnUserResp
 	if err := json.NewDecoder(resp.Body).Decode(&userResp); err != nil {
-		panic(err)
+		return err
 	}
 
 	// The story id we want should be in the first three items
@@ -156,7 +157,7 @@ func syncData() {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Println("hiring story not found in db")
 		} else {
-			panic(err)
+			return err
 		}
 	}
 
@@ -166,13 +167,13 @@ func syncData() {
 		log.Printf("expected story id %d not found in %v. will update...", hs.HnId, userStoryIds)
 		hsid, err = newHiringStory(userStoryIds)
 		if err != nil {
-			panic(err)
+			return err
 		}
 	} else {
 		hsid = uint64(userStoryIds[idx])
 	}
 
-	processJobPosts(hsid)
+	return processJobPosts(hsid)
 }
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,12 +184,18 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	hs, err := GetLatestHiringStory()
 	if err != nil {
-		panic(err)
+		log.Println("failed to get latest story.", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
 	}
-
 	log.Printf("found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
 	hj, err := SelectNextHiringJob(hs.HnId, 0)
+	if err != nil {
+		log.Println("failed to select next hiring job.", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
 	log.Printf("found hiring job [%d]", hj.HnId)
 
 	data := struct {
@@ -202,13 +209,18 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/base.html"))
 	if err := tmpl.Execute(w, data); err != nil {
 		log.Println("failed to execute to templates", err)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 }
 
 func main() {
-	// syncData()
+	if err := syncData(); err != nil {
+		log.Fatal(err)
+	}
 
 	http.HandleFunc("/", indexHandler)
+
+	fmt.Println("Listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
