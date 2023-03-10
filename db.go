@@ -52,7 +52,7 @@ func CreateHiringStory(hnId uint64, title string, time uint64) (uint64, error) {
 
 func CreateHiringJob(hjId, hsId uint64, hjText string, hjTime uint64, hjStatus uint8) (uint64, error) {
 	sql := `INSERT INTO hiring_job (hn_id, hiring_story_id, text, time, status) VALUES (?, ?, ?, ?, ?)`
-	res := db.MustExec(sql, hjId, hsId, hjText, hjText, hjStatus)
+	res := db.MustExec(sql, hjId, hsId, hjText, hjTime, hjStatus)
 	_, err := res.LastInsertId()
 	if err != nil {
 		return 0, err
@@ -71,7 +71,7 @@ func GetLatestHiringStory() (*HiringStory, error) {
 }
 
 func SelectHiringJobIds(hsId int) (*sql.Rows, error) {
-	sql := `select hn_id from hiring_job where hiring_story_id=?`
+	sql := `SELECT hn_id FROM hiring_job WHERE hiring_story_id=?`
 	rows, err := db.Query(sql, hsId)
 	if err != nil {
 		return nil, err
