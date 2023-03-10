@@ -88,8 +88,10 @@ func newHiringJob(hsid, hjid uint64) (uint64, error) {
 // processJobPosts will attempt to fetch and process job items for a given hiring story
 func processJobPosts(hsid uint64) error {
 	log.Printf("process jobs for hiring story id %d", hsid)
-	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hsid))
+	itemPath := fmt.Sprintf("/item/%d.json", hsid)
+	resp, err := http.Get(hnApiBaseUri + itemPath)
 	if err != nil {
+		log.Printf("failed to request %s\n", itemPath)
 		return err
 	}
 	defer resp.Body.Close()
@@ -98,6 +100,7 @@ func processJobPosts(hsid uint64) error {
 		Kids []uint64 `json:"kids"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&hs); err != nil {
+		log.Printf("failed to decode response for %s\n", itemPath)
 		return err
 	}
 
@@ -140,12 +143,14 @@ func syncData() error {
 
 	resp, err := http.Get(hnApiBaseUri + "/user/whoishiring.json")
 	if err != nil {
+		log.Println("whoishiring.json request failed")
 		return err
 	}
 	defer resp.Body.Close()
 
 	var userResp hnUserResp
 	if err := json.NewDecoder(resp.Body).Decode(&userResp); err != nil {
+		log.Println("failed to decode whoishiring.json response")
 		return err
 	}
 
@@ -157,6 +162,7 @@ func syncData() error {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Println("hiring story not found in db")
 		} else {
+			log.Println("failed to get latest hiring story")
 			return err
 		}
 	}
@@ -167,6 +173,7 @@ func syncData() error {
 		log.Printf("expected story id %d not found in %v. will update...", hs.HnId, userStoryIds)
 		hsid, err = newHiringStory(userStoryIds)
 		if err != nil {
+			log.Println("failed to create new hiring story")
 			return err
 		}
 	} else {
