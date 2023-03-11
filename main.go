@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 	"text/template"
 )
@@ -183,6 +184,20 @@ func syncData() error {
 	return processJobPosts(hsid)
 }
 
+// paramValue will return a parsed string as uint64 or a default value
+func paramValue(v string, d uint64) uint64 {
+	if v == "" {
+		return d
+	}
+
+	converted, err := strconv.ParseUint(v, 10, 64)
+	if err != nil {
+		return d
+	}
+
+	return converted
+}
+
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
@@ -197,9 +212,16 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
-	hj, err := SelectNextHiringJob(hs.HnId, 0)
+	after := paramValue(r.URL.Query().Get("after"), 0)
+	before := paramValue(r.URL.Query().Get("before"), 0)
+	var hj *HiringJob
+	if before > 0 {
+		hj, err = SelectPreviousHiringJob(hs.HnId, before)
+	} else {
+		hj, err = SelectNextHiringJob(hs.HnId, after)
+	}
 	if err != nil {
-		log.Println("failed to select next hiring job.", err)
+		log.Println("failed to select hiring job.", err)
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}

@@ -96,3 +96,17 @@ func SelectNextHiringJob(hsId uint64, hnTime uint64) (*HiringJob, error) {
 
 	return &hj, nil
 }
+
+func SelectPreviousHiringJob(hsId uint64, hnTime uint64) (*HiringJob, error) {
+	var hj HiringJob
+	sql := `SELECT hn_id, text, time
+            FROM hiring_job
+            WHERE hiring_story_id=? and status=? and time > ?
+            ORDER BY time ASC
+            Limit 1`
+	if err := db.Get(&hj, sql, hsId, jobStatusOk, hnTime); err != nil {
+		return &hj, err
+	}
+
+	return &hj, nil
+}
