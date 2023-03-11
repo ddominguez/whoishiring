@@ -2,6 +2,8 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/jmoiron/sqlx"
@@ -25,6 +27,24 @@ type HiringJob struct {
 	HnId uint64 `db:"hn_id"`
 	Text string
 	Time uint64
+}
+
+// transformedText will parse the job text and return
+// a string with updated html and styles
+func (hj HiringJob) transformedText() string {
+	var s string
+	var l []string
+	st := strings.Split(hj.Text, "\n")
+	for _, v := range st {
+		sl := strings.Split(v, "<p>")
+		for _, slv := range sl {
+			l = append(l, slv)
+		}
+	}
+	for _, v := range l {
+		s = s + fmt.Sprintf(`<p class="my-2">%s</p>`, v)
+	}
+	return s
 }
 
 func HiringJobStatus(dead bool, deleted bool) uint8 {

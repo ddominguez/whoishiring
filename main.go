@@ -227,6 +227,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("found hiring job [%d]", hj.HnId)
 
+	hj.Text = hj.transformedText()
 	data := struct {
 		Story HiringStory
 		Job   HiringJob
