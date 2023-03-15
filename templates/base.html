@@ -7,12 +7,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/htmx.org@1.8.5"></script>
+    <style type="text/tailwindcss">
+        @layer base {
+            a {
+                text-decoration: underline;
+            }
+        }
+    </style>
 </head>
 
-<body class="bg-slate-600 text-white">
+<body class="bg-slate-700 text-white md:text-lg">
     <div class="mx-3 my-4 md:mx-auto md:max-w-2xl lg:max-w-3xl">
         {{ if . }}
-        <div class="font-semibold mb-1 text-lg">{{ .Story.Title }}</div>
+        <div class="font-semibold mb-2 text-xl">
+            <a href=https://news.ycombinator.com/item?id={{ .Story.HnId }}>{{ .Story.Title }}</a>
+        </div>
         <div class="job-container">
             <div class="flex justify-between mb-1">
                 <a href="?before={{ .Job.Time }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Previous</a>
