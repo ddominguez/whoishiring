@@ -44,6 +44,8 @@ func (hj HiringJob) transformedText() string {
 	for _, v := range l {
 		s = s + fmt.Sprintf(`<p class="my-2">%s</p>`, v)
 	}
+	tm := time.Unix(int64(hj.Time), 0)
+	s = s + fmt.Sprintf(`<p class="my-2">Posted: %s</p>`, tm)
 	return s
 }
 
