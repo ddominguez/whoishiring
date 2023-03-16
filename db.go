@@ -72,9 +72,9 @@ func CreateHiringStory(hnId uint64, title string, time uint64) (uint64, error) {
 	return hnId, nil
 }
 
-func CreateHiringJob(hjId, hsId uint64, hjText string, hjTime uint64, hjStatus uint8) (uint64, error) {
-	sql := `INSERT INTO hiring_job (hn_id, hiring_story_id, text, time, status) VALUES (?, ?, ?, ?, ?)`
-	res := db.MustExec(sql, hjId, hsId, hjText, hjTime, hjStatus)
+func CreateHiringJob(hjId, hsHnId uint64, hjText string, hjTime uint64, hjStatus uint8) (uint64, error) {
+	sql := `INSERT INTO hiring_job (hn_id, hiring_story_hn_id, text, time, status) VALUES (?, ?, ?, ?, ?)`
+	res := db.MustExec(sql, hjId, hsHnId, hjText, hjTime, hjStatus)
 	_, err := res.LastInsertId()
 	if err != nil {
 		return 0, err
@@ -92,9 +92,9 @@ func GetLatestHiringStory() (*HiringStory, error) {
 	return &hs, nil
 }
 
-func SelectHiringJobIds(hsId int) (*sql.Rows, error) {
-	sql := `SELECT hn_id FROM hiring_job WHERE hiring_story_id=?`
-	rows, err := db.Query(sql, hsId)
+func SelectHiringJobIds(hsHnId int) (*sql.Rows, error) {
+	sql := `SELECT hn_id FROM hiring_job WHERE hiring_story_hn_id=?`
+	rows, err := db.Query(sql, hsHnId)
 	if err != nil {
 		return nil, err
 	}
@@ -102,31 +102,31 @@ func SelectHiringJobIds(hsId int) (*sql.Rows, error) {
 	return rows, nil
 }
 
-func SelectNextHiringJob(hsId uint64, hnTime uint64) (*HiringJob, error) {
+func SelectNextHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 	var hj HiringJob
 	sql := `SELECT hn_id, text, time
             FROM hiring_job
-            WHERE hiring_story_id=? and status=? and time < ?
+            WHERE hiring_story_hn_id=? and status=? and time < ?
             ORDER BY time Desc
             Limit 1`
 	if hnTime == 0 {
 		hnTime = uint64(time.Now().Unix())
 	}
-	if err := db.Get(&hj, sql, hsId, jobStatusOk, hnTime); err != nil {
+	if err := db.Get(&hj, sql, hsHnId, jobStatusOk, hnTime); err != nil {
 		return &hj, err
 	}
 
 	return &hj, nil
 }
 
-func SelectPreviousHiringJob(hsId uint64, hnTime uint64) (*HiringJob, error) {
+func SelectPreviousHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 	var hj HiringJob
 	sql := `SELECT hn_id, text, time
             FROM hiring_job
-            WHERE hiring_story_id=? and status=? and time > ?
+            WHERE hiring_story_hn_id=? and status=? and time > ?
             ORDER BY time ASC
             Limit 1`
-	if err := db.Get(&hj, sql, hsId, jobStatusOk, hnTime); err != nil {
+	if err := db.Get(&hj, sql, hsHnId, jobStatusOk, hnTime); err != nil {
 		return &hj, err
 	}
 
