@@ -46,11 +46,11 @@ func newHiringStory(s []int) (uint64, error) {
 		}
 
 		if strings.HasPrefix(hs.Title, "Ask HN: Who is hiring?") {
-			hsId, err := CreateHiringStory(hs.Id, hs.Title, hs.Time)
+			hsHnId, err := CreateHiringStory(hs.Id, hs.Title, hs.Time)
 			if err != nil {
 				return 0, err
 			}
-			return hsId, nil
+			return hsHnId, nil
 		}
 	}
 
@@ -59,8 +59,8 @@ func newHiringStory(s []int) (uint64, error) {
 
 // newHiringJob will attempt to fetch a job item from hacker news
 // and saves it to our database.
-func newHiringJob(hsid, hjid uint64) (uint64, error) {
-	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hjid))
+func newHiringJob(hsHnId, hjHnId uint64) (uint64, error) {
+	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hjHnId))
 	if err != nil {
 		return 0, err
 	}
@@ -78,18 +78,18 @@ func newHiringJob(hsid, hjid uint64) (uint64, error) {
 	}
 
 	hjStatus := HiringJobStatus(hj.Dead, hj.Deleted)
-	_, err = CreateHiringJob(hj.Id, hsid, hj.Text, hj.Time, hjStatus)
+	_, err = CreateHiringJob(hj.Id, hsHnId, hj.Text, hj.Time, hjStatus)
 	if err != nil {
 		return 0, nil
 	}
 
-	return hjid, nil
+	return hjHnId, nil
 }
 
 // processJobPosts will attempt to fetch and process job items for a given hiring story
-func processJobPosts(hsid uint64) error {
-	log.Printf("process jobs for hiring story id %d", hsid)
-	itemPath := fmt.Sprintf("/item/%d.json", hsid)
+func processJobPosts(hsHnId uint64) error {
+	log.Printf("process jobs for hiring story id %d", hsHnId)
+	itemPath := fmt.Sprintf("/item/%d.json", hsHnId)
 	resp, err := http.Get(hnApiBaseUri + itemPath)
 	if err != nil {
 		log.Printf("failed to request %s\n", itemPath)
@@ -106,7 +106,7 @@ func processJobPosts(hsid uint64) error {
 	}
 
 	var savedIds = make(map[uint64]bool)
-	rows, err := SelectHiringJobIds(int(hsid))
+	rows, err := SelectHiringJobIds(int(hsHnId))
 	if err != nil {
 		return err
 	}
@@ -123,7 +123,7 @@ func processJobPosts(hsid uint64) error {
 		if _, ok := savedIds[v]; ok {
 			continue
 		}
-		_, err := newHiringJob(uint64(hsid), v)
+		_, err := newHiringJob(uint64(hsHnId), v)
 		if err != nil {
 			return err
 		}
@@ -169,19 +169,20 @@ func syncData() error {
 	}
 
 	idx := getIndex(userStoryIds, int(hs.HnId))
-	var hsid uint64
+	// hiring story hn_id
+	var hsHnId uint64
 	if idx == -1 {
 		log.Printf("expected story id %d not found in %v. will update...", hs.HnId, userStoryIds)
-		hsid, err = newHiringStory(userStoryIds)
+		hsHnId, err = newHiringStory(userStoryIds)
 		if err != nil {
 			log.Println("failed to create new hiring story")
 			return err
 		}
 	} else {
-		hsid = uint64(userStoryIds[idx])
+		hsHnId = uint64(userStoryIds[idx])
 	}
 
-	return processJobPosts(hsid)
+	return processJobPosts(hsHnId)
 }
 
 // paramValue will return a parsed string as uint64 or a default value
