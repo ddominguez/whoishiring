@@ -29,6 +29,11 @@ type HiringJob struct {
 	Time uint64
 }
 
+type HiringJobTime struct {
+	Min uint64
+	Max uint64
+}
+
 // transformedText will parse the job text and return
 // a string with updated html and styles
 func (hj HiringJob) transformedText() string {
@@ -131,4 +136,16 @@ func SelectPreviousHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 	}
 
 	return &hj, nil
+}
+
+func GetMinMaxHiringJobTime(hsHnId uint64) (*HiringJobTime, error) {
+	var t HiringJobTime
+	sql := `SELECT min(time) as min, max(time) as max
+            FROM hiring_job
+            WHERE hiring_story_hn_id=?`
+	if err := db.Get(&t, sql, hsHnId); err != nil {
+		return &t, err
+	}
+
+	return &t, nil
 }

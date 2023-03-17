@@ -213,6 +213,11 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
+	hjt, err := GetMinMaxHiringJobTime(hs.HnId)
+	if err != nil {
+		log.Println("failed to get min max time.", err)
+	}
+
 	after := paramValue(r.URL.Query().Get("after"), 0)
 	before := paramValue(r.URL.Query().Get("before"), 0)
 	var hj *HiringJob
@@ -223,18 +228,20 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil {
 		log.Println("failed to select hiring job.", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
 	log.Printf("found hiring job [%d]", hj.HnId)
 
 	hj.Text = hj.transformedText()
 	data := struct {
-		Story HiringStory
-		Job   HiringJob
+		Story  HiringStory
+		Job    HiringJob
+		HjTime HiringJobTime
 	}{
-		Story: *hs,
-		Job:   *hj,
+		Story:  *hs,
+		Job:    *hj,
+		HjTime: *hjt,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl := template.Must(template.ParseFiles("templates/base.html"))
