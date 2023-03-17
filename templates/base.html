@@ -27,8 +27,16 @@
         </div>
         <div class="job-container">
             <div class="flex justify-between mb-1">
+                {{ if eq .HjTime.Max .Job.Time }}
+                <button disabled class="inline-block bg-slate-900 p-1 w-20 text-center disabled:opacity-50">Previous</button>
+                {{ else }}
                 <a href="?before={{ .Job.Time }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Previous</a>
+                {{ end }}
+                {{ if eq .HjTime.Min .Job.Time }}
+                <button disabled class="inline-block bg-slate-900 p-1 w-20 text-center disabled:opacity-50">Next</button>
+                {{ else }}
                 <a href="?after={{ .Job.Time }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Next</a>
+                {{ end }}
             </div>
             {{ .Job.Text }}
         </div>
