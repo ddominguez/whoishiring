@@ -1,4 +1,4 @@
-module github.com/ddominguez/who-is-hiring
+module github.com/ddominguez/whoishiring
 
 go 1.20
 
