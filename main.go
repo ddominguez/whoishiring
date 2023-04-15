@@ -211,7 +211,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	log.Printf("found hiring story -- %s [%d]", hs.Title, hs.HnId)
 
 	hjt, err := GetMinMaxHiringJobTime(hs.HnId)
 	if err != nil {
@@ -231,7 +230,6 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
-	log.Printf("found hiring job [%d]", hj.HnId)
 
 	hj.Text = hj.transformedText()
 	data := struct {
