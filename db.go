@@ -142,8 +142,8 @@ func GetMinMaxHiringJobTime(hsHnId uint64) (*HiringJobTime, error) {
 	var t HiringJobTime
 	sql := `SELECT min(time) as min, max(time) as max
             FROM hiring_job
-            WHERE hiring_story_hn_id=?`
-	if err := db.Get(&t, sql, hsHnId); err != nil {
+            WHERE hiring_story_hn_id=? and status=?`
+	if err := db.Get(&t, sql, hsHnId, jobStatusOk); err != nil {
 		return &t, err
 	}
 
