@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -251,12 +252,19 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	if err := syncData(); err != nil {
-		log.Fatal(err)
+	sync := flag.Bool("sync", false, "Sync who is hiring data")
+	serve := flag.Bool("serve", false, "Run server")
+	flag.Parse()
+
+	if *sync {
+		if err := syncData(); err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	http.HandleFunc("/", indexHandler)
-
-	fmt.Println("Listening on http://localhost:8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	if *serve {
+		http.HandleFunc("/", indexHandler)
+		fmt.Println("Listening on http://localhost:8080")
+		log.Fatal(http.ListenAndServe(":8080", nil))
+	}
 }

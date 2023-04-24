@@ -1,10 +1,13 @@
 DB_FILE=./whoishiring.db
 MIGRATIONS_DIR=./migrations
 
-.PHONY: run migrate-status migrate-up
+.PHONY: run
 
 run:
-	go run .
+	go run . -serve
+
+sync:
+	go run . -sync
 
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) sqlite3 $(DB_FILE) status
