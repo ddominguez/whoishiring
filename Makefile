@@ -17,3 +17,6 @@ migrate-up:
 
 migrate-reset:
 	goose -dir $(MIGRATIONS_DIR) sqlite3 $(DB_FILE) reset
+
+migrate-create:
+	goose -dir $(MIGRATIONS_DIR) sqlite3 $(DB_FILE) create $(NAME) sql
