@@ -267,7 +267,7 @@ func seenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := SetHiringJobAsSeen(uint64(hn_id)); err != nil {
-        log.Println(err)
+		log.Println(err)
 	}
 }
 

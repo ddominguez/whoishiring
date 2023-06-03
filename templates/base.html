@@ -41,7 +41,7 @@
             <div class="font-semibold">
                 {{ if .Job.Seen }}You have seen this job.{{ else }}This is a new job.{{ end }}
             </div>
-            <div {{ if not .Job.Seen }}hx-get="/api/seen/{{ .Job.HnId }}" hx-trigger="revealed" hx-swap="none"{{ end }}>
+            <div {{ if not .Job.Seen }}hx-get="/api/seen/{{ .Job.HnId }}" hx-trigger="revealed" hx-swap="none" {{ end }}>
                 {{ .Job.Text }}
             </div>
         </div>
