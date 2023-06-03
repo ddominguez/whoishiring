@@ -6,7 +6,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/htmx.org@1.8.5"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.2"></script>
     <style type="text/tailwindcss">
         @layer base {
             a {
@@ -38,7 +38,12 @@
                 <a href="?after={{ .Job.Time }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Next</a>
                 {{ end }}
             </div>
-            {{ .Job.Text }}
+            <div class="font-semibold">
+                {{ if .Job.Seen }}You have seen this job.{{ else }}This is a new job.{{ end }}
+            </div>
+            <div {{ if not .Job.Seen }}hx-get="/api/seen/{{ .Job.HnId }}" hx-trigger="revealed" hx-swap="none"{{ end }}>
+                {{ .Job.Text }}
+            </div>
         </div>
         {{ end }}
     </div>

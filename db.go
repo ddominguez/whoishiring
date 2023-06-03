@@ -24,9 +24,11 @@ type HiringStory struct {
 }
 
 type HiringJob struct {
-	HnId uint64 `db:"hn_id"`
-	Text string
-	Time uint64
+	HnId  uint64 `db:"hn_id"`
+	Text  string
+	Time  uint64
+	Seen  uint8
+	Saved uint8
 }
 
 type HiringJobTime struct {
@@ -109,7 +111,7 @@ func SelectHiringJobIds(hsHnId int) (*sql.Rows, error) {
 
 func SelectNextHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 	var hj HiringJob
-	sql := `SELECT hn_id, text, time
+	sql := `SELECT hn_id, seen, saved, text, time
             FROM hiring_job
             WHERE hiring_story_hn_id=? and status=? and time < ?
             ORDER BY time Desc
@@ -126,7 +128,7 @@ func SelectNextHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 
 func SelectPreviousHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
 	var hj HiringJob
-	sql := `SELECT hn_id, text, time
+	sql := `SELECT hn_id, seen, saved, text, time
             FROM hiring_job
             WHERE hiring_story_hn_id=? and status=? and time > ?
             ORDER BY time ASC
@@ -148,4 +150,12 @@ func GetMinMaxHiringJobTime(hsHnId uint64) (*HiringJobTime, error) {
 	}
 
 	return &t, nil
+}
+
+func SetHiringJobAsSeen(hnId uint64) error {
+	_, err := db.Exec(`UPDATE hiring_job set seen=1 where hn_id=?`, hnId)
+	if err != nil {
+		return err
+	}
+	return nil
 }
