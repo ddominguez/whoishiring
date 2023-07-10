@@ -124,6 +124,10 @@ func processJobPosts(hsHnId uint64) error {
 		if _, ok := savedIds[v]; ok {
 			continue
 		}
+		if v < 1 {
+			log.Printf("Skipping hiring job id: %d\n", v)
+			continue
+		}
 		_, err := newHiringJob(uint64(hsHnId), v)
 		if err != nil {
 			return err
