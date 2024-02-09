@@ -256,21 +256,13 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func seenHandler(w http.ResponseWriter, r *http.Request) {
-	// Parse request path, validate path, and get hn id
-	split := strings.Split(strings.Trim(r.URL.Path, "/"), "/")
-
-	if len(split) != 3 {
-		http.NotFound(w, r)
-		return
-	}
-
-	hn_id, err := strconv.Atoi(split[2])
+	hnId, err := strconv.ParseUint(r.PathValue("hnId"), 10, 0)
 	if err != nil {
 		http.NotFound(w, r)
 		return
 	}
 
-	if err := SetHiringJobAsSeen(uint64(hn_id)); err != nil {
+	if err := SetHiringJobAsSeen(hnId); err != nil {
 		log.Println(err)
 	}
 }
@@ -287,8 +279,8 @@ func main() {
 	}
 
 	if *serve {
-		http.HandleFunc("/api/seen/", seenHandler)
-		http.HandleFunc("/", indexHandler)
+		http.HandleFunc("GET /api/seen/{hnId}", seenHandler)
+		http.HandleFunc("GET /", indexHandler)
 		fmt.Println("Listening on http://localhost:8080")
 		log.Fatal(http.ListenAndServe(":8080", nil))
 	}

@@ -1,6 +1,6 @@
 module github.com/ddominguez/whoishiring
 
-go 1.20
+go 1.22
 
 require (
 	github.com/jmoiron/sqlx v1.3.5
