@@ -16,6 +16,7 @@ const (
 )
 
 var firstLastIds *HiringJobId
+var currHiringStory *HiringStory
 
 // getIndex will return the position of v in s
 func getIndex[K comparable](s []K, v K) int {
@@ -211,16 +212,20 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	var err error
 
-	hs, err := GetLatestHiringStory()
-	if err != nil {
-		log.Println("failed to get latest story.", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
+	if currHiringStory == nil {
+		currHiringStory, err = GetLatestHiringStory()
+		if err != nil {
+			log.Println("failed to get latest hiring story", err)
+			http.Error(w, http.StatusText(http.StatusInternalServerError),
+				http.StatusInternalServerError)
+			return
+		}
 	}
 
 	if firstLastIds == nil {
-		firstLastIds, err = GetMinMaxHiringJobIds(hs.HnId)
+		firstLastIds, err = GetMinMaxHiringJobIds(currHiringStory.HnId)
 		if err != nil {
 			log.Println("failed to get first and last ids", err)
 		}
@@ -230,7 +235,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	before := paramValue(r.URL.Query().Get("before"), 0)
 
 	var hj *HiringJob
-	hj, err = SelectCurrentHiringJob(hs.HnId, after, before)
+	hj, err = SelectCurrentHiringJob(currHiringStory.HnId, after, before)
 	if err != nil {
 		log.Println("failed to select hiring job.", err)
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
@@ -242,7 +247,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		Job   HiringJob
 		HjIds HiringJobId
 	}{
-		Story: *hs,
+		Story: *currHiringStory,
 		Job:   *hj,
 		HjIds: *firstLastIds,
 	}
@@ -250,7 +255,8 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl := template.Must(template.ParseFiles("templates/base.html"))
 	if err := tmpl.Execute(w, data); err != nil {
 		log.Println("failed to execute to templates", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError),
+			http.StatusInternalServerError)
 		return
 	}
 }
