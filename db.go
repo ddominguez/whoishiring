@@ -31,11 +31,6 @@ type HiringJob struct {
 	Saved uint8
 }
 
-type HiringJobTime struct {
-	Min uint64
-	Max uint64
-}
-
 // transformedText will parse the job text and return
 // a string with updated html and styles
 func (hj HiringJob) transformedText() string {
@@ -109,47 +104,44 @@ func SelectHiringJobIds(hsHnId int) (*sql.Rows, error) {
 	return rows, nil
 }
 
-func SelectNextHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
+func SelectCurrentHiringJob(hsHnId, after, before uint64) (*HiringJob, error) {
 	var hj HiringJob
+	hjHnId := after
+	idCompare := ""
+	orderBy := "DESC"
+	if after == 0 && before > 0 {
+		hjHnId = before
+		idCompare = "and hn_id > ?"
+		orderBy = "ASC"
+	} else if after > 0 && before == 0 {
+		idCompare = "and hn_id < ?"
+	}
 	sql := `SELECT hn_id, seen, saved, text, time
             FROM hiring_job
-            WHERE hiring_story_hn_id=? and status=? and time < ?
-            ORDER BY time Desc
+            WHERE hiring_story_hn_id=? and status=? ` + idCompare + `
+            ORDER BY hn_id ` + orderBy + `
             Limit 1`
-	if hnTime == 0 {
-		hnTime = uint64(time.Now().Unix())
-	}
-	if err := db.Get(&hj, sql, hsHnId, jobStatusOk, hnTime); err != nil {
+	if err := db.Get(&hj, sql, hsHnId, jobStatusOk, hjHnId); err != nil {
 		return &hj, err
 	}
 
 	return &hj, nil
 }
 
-func SelectPreviousHiringJob(hsHnId, hnTime uint64) (*HiringJob, error) {
-	var hj HiringJob
-	sql := `SELECT hn_id, seen, saved, text, time
-            FROM hiring_job
-            WHERE hiring_story_hn_id=? and status=? and time > ?
-            ORDER BY time ASC
-            Limit 1`
-	if err := db.Get(&hj, sql, hsHnId, jobStatusOk, hnTime); err != nil {
-		return &hj, err
-	}
-
-	return &hj, nil
+type HiringJobId struct {
+	Min uint64
+	Max uint64
 }
 
-func GetMinMaxHiringJobTime(hsHnId uint64) (*HiringJobTime, error) {
-	var t HiringJobTime
-	sql := `SELECT min(time) as min, max(time) as max
+func GetMinMaxHiringJobIds(hnId uint64) (*HiringJobId, error) {
+	var ids HiringJobId
+	sql := `SELECT min(hn_id) as min, max(hn_id) as max
             FROM hiring_job
             WHERE hiring_story_hn_id=? and status=?`
-	if err := db.Get(&t, sql, hsHnId, jobStatusOk); err != nil {
-		return &t, err
+	if err := db.Get(&ids, sql, hnId, jobStatusOk); err != nil {
+		return &ids, err
 	}
-
-	return &t, nil
+	return &ids, nil
 }
 
 func SetHiringJobAsSeen(hnId uint64) error {

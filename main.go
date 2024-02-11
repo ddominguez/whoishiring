@@ -15,6 +15,8 @@ const (
 	hnApiBaseUri = "https://hacker-news.firebaseio.com/v0"
 )
 
+var firstLastIds *HiringJobId
+
 // getIndex will return the position of v in s
 func getIndex[K comparable](s []K, v K) int {
 	for i, sv := range s {
@@ -217,34 +219,32 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	hjt, err := GetMinMaxHiringJobTime(hs.HnId)
-	if err != nil {
-		log.Println("failed to get min max time.", err)
+	if firstLastIds == nil {
+		firstLastIds, err = GetMinMaxHiringJobIds(hs.HnId)
+		if err != nil {
+			log.Println("failed to get first and last ids", err)
+		}
 	}
 
 	after := paramValue(r.URL.Query().Get("after"), 0)
 	before := paramValue(r.URL.Query().Get("before"), 0)
+
 	var hj *HiringJob
-	if before > 0 {
-		hj, err = SelectPreviousHiringJob(hs.HnId, before)
-	} else {
-		hj, err = SelectNextHiringJob(hs.HnId, after)
-	}
+	hj, err = SelectCurrentHiringJob(hs.HnId, after, before)
 	if err != nil {
 		log.Println("failed to select hiring job.", err)
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
-
 	hj.Text = hj.transformedText()
 	data := struct {
-		Story  HiringStory
-		Job    HiringJob
-		HjTime HiringJobTime
+		Story HiringStory
+		Job   HiringJob
+		HjIds HiringJobId
 	}{
-		Story:  *hs,
-		Job:    *hj,
-		HjTime: *hjt,
+		Story: *hs,
+		Job:   *hj,
+		HjIds: *firstLastIds,
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	tmpl := template.Must(template.ParseFiles("templates/base.html"))
