@@ -2,10 +2,10 @@ package main
 
 import (
 	"fmt"
-	"text/template"
 	"log"
 	"net/http"
 	"strconv"
+	"text/template"
 )
 
 type Server struct {
@@ -40,6 +40,11 @@ func (s *Server) Run() {
 }
 
 func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+
 	after, _ := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
 	before, _ := strconv.ParseUint(r.URL.Query().Get("before"), 10, 64)
 
