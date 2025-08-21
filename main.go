@@ -6,17 +6,12 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"strings"
-	"text/template"
 )
 
 const (
 	hnApiBaseUri = "https://hacker-news.firebaseio.com/v0"
 )
-
-var firstLastIds *HiringJobId
-var currHiringStory *HiringStory
 
 // getIndex will return the position of v in s
 func getIndex[K comparable](s []K, v K) int {
@@ -193,86 +188,6 @@ func syncData() error {
 	return processJobPosts(hsHnId)
 }
 
-// paramValue will return a parsed string as uint64 or a default value
-func paramValue(v string, d uint64) uint64 {
-	if v == "" {
-		return d
-	}
-
-	converted, err := strconv.ParseUint(v, 10, 64)
-	if err != nil {
-		return d
-	}
-
-	return converted
-}
-
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
-	}
-	var err error
-
-	if currHiringStory == nil {
-		currHiringStory, err = GetLatestHiringStory()
-		if err != nil {
-			log.Println("failed to get latest hiring story", err)
-			http.Error(w, http.StatusText(http.StatusInternalServerError),
-				http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if firstLastIds == nil {
-		firstLastIds, err = GetMinMaxHiringJobIds(currHiringStory.HnId)
-		if err != nil {
-			log.Println("failed to get first and last ids", err)
-		}
-	}
-
-	after := paramValue(r.URL.Query().Get("after"), 0)
-	before := paramValue(r.URL.Query().Get("before"), 0)
-
-	var hj *HiringJob
-	hj, err = SelectCurrentHiringJob(currHiringStory.HnId, after, before)
-	if err != nil {
-		log.Println("failed to select hiring job.", err)
-		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
-		return
-	}
-	hj.Text = hj.transformedText()
-	data := struct {
-		Story HiringStory
-		Job   HiringJob
-		HjIds HiringJobId
-	}{
-		Story: *currHiringStory,
-		Job:   *hj,
-		HjIds: *firstLastIds,
-	}
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	tmpl := template.Must(template.ParseFiles("templates/base.html"))
-	if err := tmpl.Execute(w, data); err != nil {
-		log.Println("failed to execute to templates", err)
-		http.Error(w, http.StatusText(http.StatusInternalServerError),
-			http.StatusInternalServerError)
-		return
-	}
-}
-
-func seenHandler(w http.ResponseWriter, r *http.Request) {
-	hnId, err := strconv.ParseUint(r.PathValue("hnId"), 10, 0)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-
-	if err := SetHiringJobAsSeen(hnId); err != nil {
-		log.Println(err)
-	}
-}
-
 func main() {
 	sync := flag.Bool("sync", false, "Sync who is hiring data")
 	serve := flag.Bool("serve", false, "Run server")
@@ -285,9 +200,10 @@ func main() {
 	}
 
 	if *serve {
-		http.HandleFunc("GET /api/seen/{hnId}", seenHandler)
-		http.HandleFunc("GET /", indexHandler)
-		fmt.Println("Listening on http://localhost:8080")
-		log.Fatal(http.ListenAndServe(":8080", nil))
+		server, err := NewServer()
+		if err != nil {
+			log.Fatal("failed to create server:", err)
+		}
+		server.Run()
 	}
 }
