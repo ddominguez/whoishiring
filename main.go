@@ -1,107 +1,19 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"strings"
 )
 
-const (
-	hnApiBaseUri = "https://hacker-news.firebaseio.com/v0"
-)
-
-// getIndex will return the position of v in s
-func getIndex[K comparable](s []K, v K) int {
-	for i, sv := range s {
-		if v == sv {
-			return i
-		}
-	}
-	return -1
-}
-
-// newHiringStory will attempt to insert a new hiring story to our db.
-// Return the hacker news id.
-func newHiringStory(s []int) (uint64, error) {
-	type hiringStory struct {
-		Id    uint64 `json:"id"`
-		Title string `json:"title"`
-		Time  uint64 `json:"time"`
-	}
-
-	for _, sv := range s {
-		resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", sv))
-		if err != nil {
-			return 0, err
-		}
-		defer resp.Body.Close()
-
-		var hs hiringStory
-		if err := json.NewDecoder(resp.Body).Decode(&hs); err != nil {
-			return 0, err
-		}
-
-		if strings.HasPrefix(hs.Title, "Ask HN: Who is hiring?") {
-			hsHnId, err := CreateHiringStory(hs.Id, hs.Title, hs.Time)
-			if err != nil {
-				return 0, err
-			}
-			return hsHnId, nil
-		}
-	}
-
-	return 0, fmt.Errorf("could not add new hiring story from Ids %v", s)
-}
-
-// newHiringJob will attempt to fetch a job item from hacker news
-// and saves it to our database.
-func newHiringJob(hsHnId, hjHnId uint64) (uint64, error) {
-	resp, err := http.Get(hnApiBaseUri + fmt.Sprintf("/item/%d.json", hjHnId))
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	var hj struct {
-		Id      uint64 `json:"id"`
-		Text    string `json:"text"`
-		Time    uint64 `json:"time"`
-		Dead    bool   `json:"dead"`
-		Deleted bool   `json:"deleted"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&hj); err != nil {
-		return 0, err
-	}
-
-	hjStatus := HiringJobStatus(hj.Dead, hj.Deleted)
-	_, err = CreateHiringJob(hj.Id, hsHnId, hj.Text, hj.Time, hjStatus)
-	if err != nil {
-		return 0, nil
-	}
-
-	return hjHnId, nil
-}
-
 // processJobPosts will attempt to fetch and process job items for a given hiring story
-func processJobPosts(hsHnId uint64) error {
+func processJobPosts(client *Client, hsHnId uint64) error {
 	log.Printf("process jobs for hiring story id %d", hsHnId)
-	itemPath := fmt.Sprintf("/item/%d.json", hsHnId)
-	resp, err := http.Get(hnApiBaseUri + itemPath)
-	if err != nil {
-		log.Printf("failed to request %s\n", itemPath)
-		return err
-	}
-	defer resp.Body.Close()
 
-	var hs struct {
-		Kids []uint64 `json:"kids"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&hs); err != nil {
-		log.Printf("failed to decode response for %s\n", itemPath)
-		return err
+	hs, err := client.GetStory(hsHnId)
+	if err != nil {
+		return fmt.Errorf("failed to get story %d: %w", hsHnId, err)
 	}
 
 	var savedIds = make(map[uint64]bool)
@@ -118,50 +30,49 @@ func processJobPosts(hsHnId uint64) error {
 	}
 
 	// Save new job posts
-	for _, v := range hs.Kids {
-		if _, ok := savedIds[v]; ok {
+	for _, jobId := range hs.Kids {
+		if _, ok := savedIds[jobId]; ok {
 			continue
 		}
-		if v < 1 {
-			log.Printf("Skipping hiring job id: %d\n", v)
+
+		// How is this possible, you ask??
+		if jobId < 1 {
+			log.Printf("Skipping hiring job id: %d\n", jobId)
 			continue
 		}
-		_, err := newHiringJob(uint64(hsHnId), v)
+
+		hj, err := client.GetJob(jobId)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to get job %d: %v", jobId, err)
 		}
-		log.Printf("added new hiring job %d", v)
+
+		hjStatus := HiringJobStatus(hj.Dead, hj.Deleted)
+		_, err = CreateHiringJob(hj.Id, hsHnId, hj.Text, hj.Time, hjStatus)
+		if err != nil {
+			log.Printf("failed to create job %d: %v", jobId, err)
+			continue
+		}
+
+		log.Printf("added new hiring job %d", jobId)
 	}
 
 	return nil
 }
 
-// syncData will fetch the latest who is hiring story
-// insert new jobs from that story into our database.
+// syncData will fetch and save the latest WhoIsHiring story and jobs.
 func syncData() error {
 	log.Println("starting data sync...")
 
-	type hnUserResp struct {
-		StoryIds []int `json:"submitted"`
-	}
-
-	resp, err := http.Get(hnApiBaseUri + "/user/whoishiring.json")
-	if err != nil {
-		log.Println("whoishiring.json request failed")
-		return err
-	}
-	defer resp.Body.Close()
-
-	var userResp hnUserResp
-	if err := json.NewDecoder(resp.Body).Decode(&userResp); err != nil {
-		log.Println("failed to decode whoishiring.json response")
-		return err
-	}
+	client := NewClient()
+	submissionIds, err := client.GetWhoIsHiringSubmissionIds()
 
 	// The story id we want should be in the first three items
-	userStoryIds := userResp.StoryIds[0:3]
+	hiringStory, err := client.FindWhoIsHiringStory(submissionIds[0:3])
+	if err != nil {
+		return fmt.Errorf("failed to find who is hiring story: %w", err)
+	}
 
-	hs, err := GetLatestHiringStory()
+	latestStory, err := GetLatestHiringStory()
 	if err != nil {
 		if strings.Contains(err.Error(), "no rows in result set") {
 			log.Println("hiring story not found in db")
@@ -171,21 +82,19 @@ func syncData() error {
 		}
 	}
 
-	idx := getIndex(userStoryIds, int(hs.HnId))
-	// hiring story hn_id
 	var hsHnId uint64
-	if idx == -1 {
-		log.Printf("expected story id %d not found in %v. will update...", hs.HnId, userStoryIds)
-		hsHnId, err = newHiringStory(userStoryIds)
-		if err != nil {
-			log.Println("failed to create new hiring story")
-			return err
-		}
+	if latestStory != nil && latestStory.HnId == hiringStory.Id {
+		log.Println("existing hiring story found")
+		hsHnId = latestStory.HnId
 	} else {
-		hsHnId = uint64(userStoryIds[idx])
+		hsHnId, err = CreateHiringStory(hiringStory.Id, hiringStory.Title, hiringStory.Time)
+		if err != nil {
+			return fmt.Errorf("failed to create hiring story: %w", err)
+		}
+		log.Println("new hiring story found and created")
 	}
 
-	return processJobPosts(hsHnId)
+	return processJobPosts(client, hsHnId)
 }
 
 func main() {
