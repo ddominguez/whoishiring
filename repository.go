@@ -3,15 +3,11 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"strings"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
-
-// const (
-// 	jobStatusOk      = 1
-// 	jobStatusDead    = 2
-// 	jobStatusDeleted = 3
-// )
 
 type HnStory struct {
 	HnId  uint64 `db:"hn_id"`
@@ -26,6 +22,25 @@ type HnJob struct {
 	Seen   uint8  `db:"seen"`
 	Saved  uint8  `db:"saved"`
 	Status uint8  `db:"status"`
+}
+
+// TextTransformed will parse the job text and return a string with updated html and styles
+func (j *HnJob) TransformedText() string {
+	var s string
+	var l []string
+	st := strings.Split(j.Text, "\n")
+	for _, v := range st {
+		sl := strings.Split(v, "<p>")
+		for _, slv := range sl {
+			l = append(l, slv)
+		}
+	}
+	for _, v := range l {
+		s = s + fmt.Sprintf(`<p class="my-2">%s</p>`, v)
+	}
+	tm := time.Unix(int64(j.Time), 0)
+	s = s + fmt.Sprintf(`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %s</a></p>`, j.HnId, tm)
+	return s
 }
 
 type HNRepository interface {

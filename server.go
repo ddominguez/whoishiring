@@ -9,24 +9,29 @@ import (
 )
 
 type Server struct {
-	currHiringStory *HiringStory
-	firstLastIds    *HiringJobId
+	store    HNRepository
+	hnStory  *HnStory
+	minJobId uint64
+	maxJobId uint64
 }
 
-func NewServer() (*Server, error) {
-	latestHiringStory, err := GetLatestHiringStory()
+// NewServer creates a new Server.
+func NewServer(store HNRepository) (*Server, error) {
+	latestStory, err := store.GetLatestStory()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
 	}
 
-	firstLastIds, err := GetMinMaxHiringJobIds(latestHiringStory.HnId)
+	minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get min/max hiring job IDs: %w", err)
 	}
 
 	return &Server{
-		currHiringStory: latestHiringStory,
-		firstLastIds:    firstLastIds,
+		store:    store,
+		hnStory:  latestStory,
+		minJobId: minJobId,
+		maxJobId: maxJobId,
 	}, nil
 }
 
@@ -48,22 +53,32 @@ func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	after, _ := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
 	before, _ := strconv.ParseUint(r.URL.Query().Get("before"), 10, 64)
 
-	hj, err := SelectCurrentHiringJob(s.currHiringStory.HnId, after, before)
+	var hj *HnJob
+	var err error
+	if after == 0 && before > 0 {
+		hj, err = s.store.GetPreviousJobById(s.hnStory.HnId, before)
+	} else if after > 0 && before == 0 {
+		hj, err = s.store.GetNextJobById(s.hnStory.HnId, after)
+	} else {
+		hj, err = s.store.GetFirstJob(s.hnStory.HnId)
+	}
 	if err != nil {
 		log.Println("failed to select hiring job:", err)
 		http.Error(w, http.StatusText(http.StatusNotFound), http.StatusNotFound)
 		return
 	}
-	hj.Text = hj.transformedText()
 
+	hj.Text = hj.TransformedText()
 	data := struct {
-		Story HiringStory
-		Job   HiringJob
-		HjIds HiringJobId
+		Story    *HnStory
+		Job      *HnJob
+		MinJobId uint64
+		MaxJobId uint64
 	}{
-		Story: *s.currHiringStory,
-		Job:   *hj,
-		HjIds: *s.firstLastIds,
+		Story:    s.hnStory,
+		Job:      hj,
+		MinJobId: s.minJobId,
+		MaxJobId: s.maxJobId,
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -82,7 +97,7 @@ func (s *Server) seenHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := SetHiringJobAsSeen(hnId); err != nil {
+	if err := s.store.SetJobAsSeen(hnId); err != nil {
 		log.Println(err)
 	}
 }

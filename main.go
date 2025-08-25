@@ -4,30 +4,21 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"strings"
+
+	"github.com/jmoiron/sqlx"
+	_ "github.com/mattn/go-sqlite3"
 )
 
-// processJobPosts will attempt to fetch and process job items for a given hiring story
-func processJobPosts(client *Client, hsHnId uint64) error {
-	log.Printf("process jobs for hiring story id %d", hsHnId)
+// processJobPosts will fetch and process job items for a given hiring story
+func processJobPosts(store HNRepository, client *Client, hnStoryId uint64) error {
+	log.Printf("process jobs for hiring story id %d", hnStoryId)
 
-	hs, err := client.GetStory(hsHnId)
+	hs, err := client.GetStory(hnStoryId)
 	if err != nil {
-		return fmt.Errorf("failed to get story %d: %w", hsHnId, err)
+		return fmt.Errorf("failed to get story %d: %w", hnStoryId, err)
 	}
 
-	var savedIds = make(map[uint64]bool)
-	rows, err := SelectHiringJobIds(int(hsHnId))
-	if err != nil {
-		return err
-	}
-	for rows.Next() {
-		var hnid uint64
-		if err := rows.Scan(&hnid); err != nil {
-			return err
-		}
-		savedIds[hnid] = true
-	}
+	savedIds, err := store.GetJobIdsByStoryId(hnStoryId)
 
 	// Save new job posts
 	for _, jobId := range hs.Kids {
@@ -41,13 +32,17 @@ func processJobPosts(client *Client, hsHnId uint64) error {
 			continue
 		}
 
-		hj, err := client.GetJob(jobId)
+		job, err := client.GetJob(jobId)
 		if err != nil {
 			return fmt.Errorf("failed to get job %d: %v", jobId, err)
 		}
 
-		hjStatus := HiringJobStatus(hj.Dead, hj.Deleted)
-		_, err = CreateHiringJob(hj.Id, hsHnId, hj.Text, hj.Time, hjStatus)
+		err = store.CreateJob(&HnJob{
+			HnId:   job.Id,
+			Text:   job.Text,
+			Time:   job.Time,
+			Status: job.StatusToDbValue(),
+		}, hnStoryId)
 		if err != nil {
 			log.Printf("failed to create job %d: %v", jobId, err)
 			continue
@@ -60,7 +55,7 @@ func processJobPosts(client *Client, hsHnId uint64) error {
 }
 
 // syncData will fetch and save the latest WhoIsHiring story and jobs.
-func syncData() error {
+func syncData(store HNRepository) error {
 	log.Println("starting data sync...")
 
 	client := NewClient()
@@ -72,14 +67,9 @@ func syncData() error {
 		return fmt.Errorf("failed to find who is hiring story: %w", err)
 	}
 
-	latestStory, err := GetLatestHiringStory()
+	latestStory, err := store.GetLatestStory()
 	if err != nil {
-		if strings.Contains(err.Error(), "no rows in result set") {
-			log.Println("hiring story not found in db")
-		} else {
-			log.Println("failed to get latest hiring story")
-			return err
-		}
+		return err
 	}
 
 	var hsHnId uint64
@@ -87,14 +77,18 @@ func syncData() error {
 		log.Println("existing hiring story found")
 		hsHnId = latestStory.HnId
 	} else {
-		hsHnId, err = CreateHiringStory(hiringStory.Id, hiringStory.Title, hiringStory.Time)
+		err := store.CreateStory(&HnStory{
+			HnId:  hiringStory.Id,
+			Title: hiringStory.Title,
+			Time:  hiringStory.Time,
+		})
 		if err != nil {
 			return fmt.Errorf("failed to create hiring story: %w", err)
 		}
 		log.Println("new hiring story found and created")
 	}
 
-	return processJobPosts(client, hsHnId)
+	return processJobPosts(store, client, hsHnId)
 }
 
 func main() {
@@ -102,14 +96,22 @@ func main() {
 	serve := flag.Bool("serve", false, "Run server")
 	flag.Parse()
 
+	db, err := sqlx.Connect("sqlite3", "whoishiring.db")
+	if err != nil {
+		log.Fatal("failed to connect to database: %w", err)
+	}
+	defer db.Close()
+
+	store := NewHNStore(db)
+
 	if *sync {
-		if err := syncData(); err != nil {
+		if err := syncData(store); err != nil {
 			log.Fatal(err)
 		}
 	}
 
 	if *serve {
-		server, err := NewServer()
+		server, err := NewServer(store)
 		if err != nil {
 			log.Fatal("failed to create server:", err)
 		}

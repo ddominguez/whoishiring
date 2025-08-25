@@ -27,12 +27,12 @@
         </div>
         <div class="job-container">
             <div class="flex justify-between mb-1">
-                {{ if eq .HjIds.Max .Job.HnId }}
+                {{ if eq .MaxJobId .Job.HnId }}
                 <button disabled class="inline-block bg-slate-900 p-1 w-20 text-center disabled:opacity-50">Previous</button>
                 {{ else }}
                 <a href="?before={{ .Job.HnId }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Previous</a>
                 {{ end }}
-                {{ if eq .HjIds.Min .Job.HnId }}
+                {{ if eq .MinJobId .Job.HnId }}
                 <button disabled class="inline-block bg-slate-900 p-1 w-20 text-center disabled:opacity-50">Next</button>
                 {{ else }}
                 <a href="?after={{ .Job.HnId }}" class="inline-block bg-slate-900 p-1 w-20 text-center">Next</a>

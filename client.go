@@ -10,21 +10,34 @@ import (
 
 const apiBaseURL = "https://hacker-news.firebaseio.com/v0"
 
-// Story represents a Hacker News story.
-type Story struct {
+// ApiStory represents a Hacker News story response item.
+type ApiStory struct {
 	Id    uint64   `json:"id"`
 	Title string   `json:"title"`
 	Time  uint64   `json:"time"`
 	Kids  []uint64 `json:"kids"`
 }
 
-// Job represents a Hacker News job post.
-type Job struct {
+// ApiJob represents a Hacker News job response item.
+type ApiJob struct {
 	Id      uint64 `json:"id"`
 	Text    string `json:"text"`
 	Time    uint64 `json:"time"`
 	Dead    bool   `json:"dead"`
 	Deleted bool   `json:"deleted"`
+}
+
+// StatusToDbValue returns Hacker News status db value.
+func (j *ApiJob) StatusToDbValue() uint8 {
+	if j.Dead {
+		return jobStatusDead
+	}
+
+	if j.Deleted {
+		return jobStatusDeleted
+	}
+
+	return jobStatusOk
 }
 
 // Client is a client for the Hacker News API.
@@ -40,7 +53,7 @@ func NewClient() *Client {
 }
 
 // GetStory fetches a Hacker News story by id
-func (c *Client) GetStory(id uint64) (*Story, error) {
+func (c *Client) GetStory(id uint64) (*ApiStory, error) {
 	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
@@ -48,7 +61,7 @@ func (c *Client) GetStory(id uint64) (*Story, error) {
 	}
 	defer resp.Body.Close()
 
-	var story Story
+	var story ApiStory
 	if err := json.NewDecoder(resp.Body).Decode(&story); err != nil {
 		return nil, fmt.Errorf("failed to decode story %d: %w", id, err)
 	}
@@ -57,7 +70,7 @@ func (c *Client) GetStory(id uint64) (*Story, error) {
 }
 
 // GetJob fetches a Hacker News story by id
-func (c *Client) GetJob(id uint64) (*Job, error) {
+func (c *Client) GetJob(id uint64) (*ApiJob, error) {
 	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
@@ -65,7 +78,7 @@ func (c *Client) GetJob(id uint64) (*Job, error) {
 	}
 	defer resp.Body.Close()
 
-	var job Job
+	var job ApiJob
 	if err := json.NewDecoder(resp.Body).Decode(&job); err != nil {
 		return nil, fmt.Errorf("failed to decode job %d: %w", id, err)
 	}
@@ -93,7 +106,7 @@ func (c *Client) GetWhoIsHiringSubmissionIds() ([]uint64, error) {
 	return user.Submitted, nil
 }
 
-func (c *Client) FindWhoIsHiringStory(storyIds []uint64) (*Story, error) {
+func (c *Client) FindWhoIsHiringStory(storyIds []uint64) (*ApiStory, error) {
 	for _, id := range storyIds {
 		story, err := c.GetStory(id)
 		if err != nil {
