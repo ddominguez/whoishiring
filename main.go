@@ -19,6 +19,9 @@ func processJobPosts(store HNRepository, client *Client, hnStoryId uint64) error
 	}
 
 	savedIds, err := store.GetJobIdsByStoryId(hnStoryId)
+	if err != nil {
+		return fmt.Errorf("failed to GetJobIdsByStoryId: %w", err)
+	}
 
 	// Save new job posts
 	for _, jobId := range hs.Kids {
