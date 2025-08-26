@@ -24,7 +24,7 @@ type HnJob struct {
 	Status uint8  `db:"status"`
 }
 
-// TextTransformed will parse the job text and return a string with updated html and styles
+// TransformedText returns HnJob Text with updated html.
 func (j *HnJob) TransformedText() string {
 	var s string
 	var l []string

@@ -45,14 +45,14 @@ type Client struct {
 	httpClient *http.Client
 }
 
-// NewClient create new Hacker News API client
+// NewClient create new Hacker News API client.
 func NewClient() *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
-// GetStory fetches a Hacker News story by id
+// GetStory fetches a Hacker News story by id.
 func (c *Client) GetStory(id uint64) (*ApiStory, error) {
 	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
 	resp, err := c.httpClient.Get(url)
@@ -69,7 +69,7 @@ func (c *Client) GetStory(id uint64) (*ApiStory, error) {
 	return &story, nil
 }
 
-// GetJob fetches a Hacker News story by id
+// GetJob fetches a Hacker News story by id.
 func (c *Client) GetJob(id uint64) (*ApiJob, error) {
 	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
 	resp, err := c.httpClient.Get(url)
@@ -86,7 +86,7 @@ func (c *Client) GetJob(id uint64) (*ApiJob, error) {
 	return &job, nil
 }
 
-// GetWhoIsHiringSubmissionIds fetches story IDs from user whoishiring
+// GetWhoIsHiringSubmissionIds fetches story IDs from user whoishiring.
 func (c *Client) GetWhoIsHiringSubmissionIds() ([]uint64, error) {
 	url := fmt.Sprintf("%s/user/whoishiring.json", apiBaseURL)
 	resp, err := c.httpClient.Get(url)
@@ -106,6 +106,7 @@ func (c *Client) GetWhoIsHiringSubmissionIds() ([]uint64, error) {
 	return user.Submitted, nil
 }
 
+// FindWhoIsHiringStory fetches the latest WhoIsHiring story.
 func (c *Client) FindWhoIsHiringStory(storyIds []uint64) (*ApiStory, error) {
 	for _, id := range storyIds {
 		story, err := c.GetStory(id)
