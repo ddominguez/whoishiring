@@ -150,7 +150,7 @@ func (s *HNStore) GetFirstJob(hnStoryId uint64) (*HnJob, error) {
             ORDER BY hn_id DESC
             Limit 1`
 	if err := s.db.Get(&job, query, hnStoryId, jobStatusOk); err != nil {
-		return &job, fmt.Errorf("failed to select first hiring job: %w", err)
+		return nil, fmt.Errorf("failed to select first hiring job: %w", err)
 	}
 
 	return &job, nil
@@ -166,7 +166,7 @@ func (s *HNStore) GetNextJobById(hnStoryId, hnJobId uint64) (*HnJob, error) {
             ORDER BY hn_id DESC
             Limit 1`
 	if err := s.db.Get(&job, query, hnStoryId, jobStatusOk, hnJobId); err != nil {
-		return &job, fmt.Errorf("failed to select next hiring job: %w", err)
+		return nil, fmt.Errorf("failed to select next hiring job: %w", err)
 	}
 
 	return &job, nil
@@ -182,7 +182,7 @@ func (s *HNStore) GetPreviousJobById(hnStoryId, hnJobId uint64) (*HnJob, error) 
             ORDER BY hn_id ASC
             Limit 1`
 	if err := s.db.Get(&job, query, hnStoryId, jobStatusOk, hnJobId); err != nil {
-		return &job, fmt.Errorf("failed to select previous hiring job: %w", err)
+		return nil, fmt.Errorf("failed to select previous hiring job: %w", err)
 	}
 
 	return &job, nil
