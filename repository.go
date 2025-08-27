@@ -64,7 +64,7 @@ func (s *HNStore) CreateStory(story *HnStory) error {
 	query := `INSERT INTO hiring_story (hn_id, title, time)
 						VALUES (?, ?, ?)`
 
-	_, err := s.db.Exec(query, story.HnId, story.Title, story.Title)
+	_, err := s.db.Exec(query, story.HnId, story.Title, story.Time)
 	if err != nil {
 		return fmt.Errorf("failed to create hiring story: %w", err)
 	}
