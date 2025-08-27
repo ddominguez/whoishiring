@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"text/template"
 )
 
@@ -44,14 +45,31 @@ func (s *Server) Run() {
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
 
+// parseUint64OrDefault parses stringVal as a uint64, returning defaultVal if
+// stringVal is empty or invalid.
+func (s *Server) parseUint64OrDefault(stringVal string, defaultVal uint64) uint64 {
+	trimmed := strings.TrimSpace(stringVal)
+	if trimmed == "" {
+		return defaultVal
+	}
+
+	converted, err := strconv.ParseUint(trimmed, 10, 64)
+	if err != nil {
+		log.Printf("failed to convert string %s to uint64\n", trimmed)
+		return defaultVal
+	}
+
+	return converted
+}
+
 func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
 		http.NotFound(w, r)
 		return
 	}
 
-	after, _ := strconv.ParseUint(r.URL.Query().Get("after"), 10, 64)
-	before, _ := strconv.ParseUint(r.URL.Query().Get("before"), 10, 64)
+	after := s.parseUint64OrDefault(r.URL.Query().Get("after"), 0)
+	before := s.parseUint64OrDefault(r.URL.Query().Get("before"), 0)
 
 	var hj *HnJob
 	var err error
