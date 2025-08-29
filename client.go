@@ -61,6 +61,10 @@ func (c *Client) GetStory(id uint64) (*ApiStory, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HackerNews API returned status %d", resp.StatusCode)
+	}
+
 	var story ApiStory
 	if err := json.NewDecoder(resp.Body).Decode(&story); err != nil {
 		return nil, fmt.Errorf("failed to decode story %d: %w", id, err)
