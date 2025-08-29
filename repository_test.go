@@ -25,7 +25,7 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 
 	err = goose.Up(db, migrationsPath)
 	if err != nil {
-		t.Fatalf("failed run migrations: %v", err)
+		t.Fatalf("failed to run migrations: %v", err)
 	}
 
 	return sqlx.NewDb(db, "sqlite3")
@@ -55,7 +55,7 @@ func TestHNStore_CreateStory(t *testing.T) {
 		expectedStory.HnId,
 	)
 	if err != nil {
-		t.Fatalf("failed to query database: %v", err)
+		t.Fatalf("failed to query story from database: %v", err)
 	}
 	if story != *expectedStory {
 		t.Fatalf("expected story %+v, got %+v", *expectedStory, story)
