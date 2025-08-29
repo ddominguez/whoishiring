@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 )
@@ -23,7 +24,7 @@ func (s *SyncProcess) Run() error {
 	}
 
 	latestStory, err := s.store.GetLatestStory()
-	if err != nil {
+	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -20,11 +21,10 @@ type Server struct {
 func NewServer(store HNRepository) (*Server, error) {
 	latestStory, err := store.GetLatestStory()
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("GetLatestStory() returned zero rows.")
+		}
 		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
-	}
-
-	if latestStory == nil {
-		return nil, fmt.Errorf("failed to get latest hiring story: does not exist.")
 	}
 
 	minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)

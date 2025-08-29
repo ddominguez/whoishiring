@@ -115,7 +115,7 @@ func (s *HNStore) GetLatestStory() (*HnStory, error) {
 	err := s.db.Get(&story, query)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			return nil, nil
+			return nil, sql.ErrNoRows
 		}
 		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
 	}
