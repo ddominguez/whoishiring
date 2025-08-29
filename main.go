@@ -22,7 +22,8 @@ func main() {
 	store := NewHNStore(db)
 
 	if *sync {
-		client := NewClient()
+		baseUrl := "https://hacker-news.firebaseio.com/v0"
+		client := NewClient(baseUrl)
 		sp := NewSyncProcess(store, client)
 		if err := sp.Run(); err != nil {
 			log.Fatal(err)

@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const apiBaseURL = "https://hacker-news.firebaseio.com/v0"
-
 // ApiStory represents a Hacker News story response item.
 type ApiStory struct {
 	Id    uint64   `json:"id"`
@@ -43,18 +41,20 @@ func (j *ApiJob) StatusToDbValue() uint8 {
 // Client is a client for the Hacker News API.
 type Client struct {
 	httpClient *http.Client
+	baseUrl    string
 }
 
 // NewClient create new Hacker News API client.
-func NewClient() *Client {
+func NewClient(baseUrl string) *Client {
 	return &Client{
 		httpClient: &http.Client{Timeout: 10 * time.Second},
+		baseUrl:    baseUrl,
 	}
 }
 
 // GetStory fetches a Hacker News story by id.
 func (c *Client) GetStory(id uint64) (*ApiStory, error) {
-	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
+	url := fmt.Sprintf("%s/item/%d.json", c.baseUrl, id)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get story %d: %w", id, err)
@@ -71,7 +71,7 @@ func (c *Client) GetStory(id uint64) (*ApiStory, error) {
 
 // GetJob fetches a Hacker News story by id.
 func (c *Client) GetJob(id uint64) (*ApiJob, error) {
-	url := fmt.Sprintf("%s/item/%d.json", apiBaseURL, id)
+	url := fmt.Sprintf("%s/item/%d.json", c.baseUrl, id)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get job %d: %w", id, err)
@@ -88,7 +88,7 @@ func (c *Client) GetJob(id uint64) (*ApiJob, error) {
 
 // GetWhoIsHiringSubmissionIds fetches story IDs from user whoishiring.
 func (c *Client) GetWhoIsHiringSubmissionIds() ([]uint64, error) {
-	url := fmt.Sprintf("%s/user/whoishiring.json", apiBaseURL)
+	url := fmt.Sprintf("%s/user/whoishiring.json", c.baseUrl)
 	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get whoishiring user: %w", err)
