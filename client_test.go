@@ -45,7 +45,7 @@ func TestClientGetStory(t *testing.T) {
 			t.Fatal("expected a story, got nil")
 		}
 		if !reflect.DeepEqual(*story, expectedStory) {
-			t.Errorf("expected story %+v, got %+v", expectedStory, *story)
+			t.Fatalf("expected story %+v, got %+v", expectedStory, *story)
 		}
 	})
 
