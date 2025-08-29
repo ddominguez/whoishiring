@@ -18,6 +18,8 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 		t.Fatalf("failed to open database: %v", err)
 	}
 
+	goose.SetLogger(goose.NopLogger())
+
 	err = goose.SetDialect("sqlite3")
 	if err != nil {
 		t.Fatalf("failed to set dialect: %v", err)
