@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -18,26 +17,17 @@ type Server struct {
 }
 
 // NewServer creates a new Server.
-func NewServer(store HNRepository) (*Server, error) {
-	latestStory, err := store.GetLatestStory()
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, fmt.Errorf("GetLatestStory() returned zero rows.")
-		}
-		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
-	}
-
-	minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get min/max hiring job IDs: %w", err)
-	}
-
+func NewServer(
+	store HNRepository,
+	latestStory *HnStory,
+	minJobId, maxJobId uint64,
+) *Server {
 	return &Server{
 		store:    store,
 		hnStory:  latestStory,
 		minJobId: minJobId,
 		maxJobId: maxJobId,
-	}, nil
+	}
 }
 
 // Run starts the web server.
