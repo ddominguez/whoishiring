@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"log"
 
@@ -32,19 +31,10 @@ func main() {
 	}
 
 	if *serve {
-		latestStory, err := store.GetLatestStory()
+		server, err := InitializeNewServer(store)
 		if err != nil {
-			if err == sql.ErrNoRows {
-				log.Fatal("GetLatestStory() returned zero rows.")
-			}
-			log.Fatalf("failed to get latest hiring story: %v", err)
+			log.Fatal(err)
 		}
-
-		minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)
-		if err != nil {
-			log.Fatalf("GetMinMaxJobsIds(%d) failed: %v", latestStory.HnId, err)
-		}
-		server := NewServer(store, latestStory, minJobId, maxJobId)
 		server.Run()
 	}
 }

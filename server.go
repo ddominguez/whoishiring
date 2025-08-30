@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -28,6 +29,24 @@ func NewServer(
 		minJobId: minJobId,
 		maxJobId: maxJobId,
 	}
+}
+
+// InitializeNewServer creates a Server configured with the latest story and its job ID range.
+func InitializeNewServer(store HNRepository) (*Server, error) {
+	latestStory, err := store.GetLatestStory()
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("GetLatestStory() returned zero rows.")
+		}
+		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
+	}
+
+	minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)
+	if err != nil {
+		return nil, fmt.Errorf("GetMinMaxJobsIds(%d) failed: %w", latestStory.HnId, err)
+	}
+
+	return NewServer(store, latestStory, minJobId, maxJobId), nil
 }
 
 // Run starts the web server.
