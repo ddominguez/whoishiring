@@ -41,7 +41,7 @@ func InitializeNewServer(store HNRepository) (*Server, error) {
 		return nil, fmt.Errorf("failed to get latest hiring story: %w", err)
 	}
 
-	minJobId, maxJobId, err := store.GetMinMaxJobsIds(latestStory.HnId)
+	minJobId, maxJobId, err := store.GetMinMaxJobIDs(latestStory.HnId)
 	if err != nil {
 		return nil, fmt.Errorf("GetMinMaxJobsIds(%d) failed: %w", latestStory.HnId, err)
 	}

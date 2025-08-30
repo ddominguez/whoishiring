@@ -51,7 +51,7 @@ type HNRepository interface {
 	GetFirstJob(hnStoryId uint64) (*HnJob, error)
 	GetNextJobById(hnStoryId, hnJobId uint64) (*HnJob, error)
 	GetPreviousJobById(hnStoryId, hnJobId uint64) (*HnJob, error)
-	GetMinMaxJobsIds(hnJobId uint64) (uint64, uint64, error)
+	GetMinMaxJobIDs(hnJobId uint64) (uint64, uint64, error)
 	SetJobAsSeen(hnJobId uint64) error
 }
 
@@ -123,8 +123,8 @@ func (s *HNStore) GetLatestStory() (*HnStory, error) {
 	return &story, nil
 }
 
-// GetMinMaxJobsIds retrieves the min and max job IDs for a hiring story.
-func (s *HNStore) GetMinMaxJobsIds(hnStoryId uint64) (uint64, uint64, error) {
+// GetMinMaxJobIDs retrieves the min and max job IDs for a hiring story.
+func (s *HNStore) GetMinMaxJobIDs(hnStoryId uint64) (uint64, uint64, error) {
 	var result struct {
 		Min uint64 `db:"min"`
 		Max uint64 `db:"max"`
