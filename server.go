@@ -53,7 +53,7 @@ func InitializeNewServer(store HNRepository) (*Server, error) {
 func (s *Server) Run() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.indexHandler)
-	mux.HandleFunc("POST /api/seen/{hnId}", s.seenHandler)
+	mux.HandleFunc("GET /api/seen/{hnId}", s.seenHandler)
 	fmt.Println("Listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
@@ -122,8 +122,10 @@ func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) seenHandler(w http.ResponseWriter, r *http.Request) {
-	hnId, err := strconv.ParseUint(r.PathValue("hnId"), 10, 0)
+	pathValue := r.PathValue("hnId")
+	hnId, err := strconv.ParseUint(pathValue, 10, 64)
 	if err != nil {
+		log.Printf("failed to convert path value:%q to uint64", pathValue)
 		http.NotFound(w, r)
 		return
 	}
