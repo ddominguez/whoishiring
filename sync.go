@@ -23,15 +23,15 @@ func (s *SyncProcess) Run() error {
 		return fmt.Errorf("failed to find who is hiring story: %w", err)
 	}
 
-	latestStory, err := s.store.GetLatestStory()
+	existingStory, err := s.store.GetLatestStory()
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 
 	var hsHnId uint64
-	if latestStory != nil && latestStory.HnId == hiringStory.Id {
-		log.Println("existing hiring story found")
-		hsHnId = latestStory.HnId
+	if existingStory != nil && existingStory.HnId == hiringStory.Id {
+		log.Printf("found existing hiring story: %d", existingStory.HnId)
+		hsHnId = existingStory.HnId
 	} else {
 		err := s.store.CreateStory(&HnStory{
 			HnId:  hiringStory.Id,
@@ -42,6 +42,7 @@ func (s *SyncProcess) Run() error {
 			return fmt.Errorf("failed to create hiring story: %w", err)
 		}
 		log.Println("new hiring story found and created")
+		hsHnId = hiringStory.Id
 	}
 
 	return s.getNewJobs(hsHnId)
