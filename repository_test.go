@@ -13,24 +13,24 @@ import (
 func setupTestDB(t *testing.T) *sqlx.DB {
 	migrationsPath := "./migrations"
 
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sqlx.Open("sqlite3", ":memory:")
 	if err != nil {
 		t.Fatalf("failed to open database: %v", err)
 	}
 
 	goose.SetLogger(goose.NopLogger())
 
-	err = goose.SetDialect("sqlite3")
+	err = goose.SetDialect(db.DriverName())
 	if err != nil {
 		t.Fatalf("failed to set dialect: %v", err)
 	}
 
-	err = goose.Up(db, migrationsPath)
+	err = goose.Up(db.DB, migrationsPath)
 	if err != nil {
 		t.Fatalf("failed to run migrations: %v", err)
 	}
 
-	return sqlx.NewDb(db, "sqlite3")
+	return db
 }
 
 func TestHNStore_CreateStory(t *testing.T) {

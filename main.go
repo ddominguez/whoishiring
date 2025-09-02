@@ -13,11 +13,15 @@ func main() {
 	serve := flag.Bool("serve", false, "Run server")
 	flag.Parse()
 
-	db, err := sqlx.Connect("sqlite3", "whoishiring.db")
+	db, err := sqlx.Open("sqlite3", "whoishiring.db")
 	if err != nil {
-		log.Fatal("failed to connect to database: %w", err)
+		log.Fatalf("failed to open database: %v", err)
 	}
 	defer db.Close()
+
+	if err := db.Ping(); err != nil {
+		log.Fatalf("failed to ping database: %v", err)
+	}
 
 	store := NewHNStore(db)
 
