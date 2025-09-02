@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sync"
 )
 
 type SyncProcess struct {
@@ -62,6 +63,8 @@ func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
 		return fmt.Errorf("failed to GetJobIdsByStoryId: %w", err)
 	}
 
+	var wg sync.WaitGroup
+
 	// Save new job posts
 	for _, jobId := range hs.Kids {
 		if _, ok := savedIds[jobId]; ok {
@@ -74,25 +77,31 @@ func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
 			continue
 		}
 
-		job, err := s.client.GetJob(jobId)
-		if err != nil {
-			return fmt.Errorf("failed to get job %d: %v", jobId, err)
-		}
+		wg.Add(1)
+		go func(id uint64) {
+			defer wg.Done()
+			job, err := s.client.GetJob(id)
+			if err != nil {
+				log.Printf("failed to get job %d: %v", id, err)
+				return
+			}
 
-		err = s.store.CreateJob(&HnJob{
-			HnId:   job.Id,
-			Text:   job.Text,
-			Time:   job.Time,
-			Status: job.StatusToDbValue(),
-		}, hnStoryId)
-		if err != nil {
-			log.Printf("failed to create job %d: %v", jobId, err)
-			continue
-		}
+			err = s.store.CreateJob(&HnJob{
+				HnId:   job.Id,
+				Text:   job.Text,
+				Time:   job.Time,
+				Status: job.StatusToDbValue(),
+			}, hnStoryId)
+			if err != nil {
+				log.Printf("failed to create job %d: %v", id, err)
+				return
+			}
 
-		log.Printf("added new hiring job %d", jobId)
+			log.Printf("added new hiring job %d", id)
+		}(jobId)
 	}
 
+	wg.Wait()
 	return nil
 }
 
