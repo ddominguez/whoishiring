@@ -9,6 +9,9 @@ run:
 sync:
 	go run . -sync
 
+test:
+	go test -v
+
 migrate-status:
 	goose -dir $(MIGRATIONS_DIR) sqlite3 $(DB_FILE) status
 
