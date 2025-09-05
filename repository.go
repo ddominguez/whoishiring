@@ -27,9 +27,8 @@ type HnJob struct {
 // TransformedText returns HnJob Text with updated html.
 func (j *HnJob) TransformedText() string {
 	var result string
-	var lines []string
-	jobTxt := strings.TrimSpace(j.Text)
 
+	jobTxt := strings.TrimSpace(j.Text)
 	postedLink := fmt.Sprintf(
 		`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %s</a></p>`,
 		j.HnId,
@@ -40,16 +39,10 @@ func (j *HnJob) TransformedText() string {
 		return postedLink
 	}
 
-	splitLines := strings.Split(jobTxt, "\n")
-	for _, lineVal := range splitLines {
-		splitPars := strings.Split(lineVal, "<p>")
-		for _, parVal := range splitPars {
-			lines = append(lines, parVal)
+	for lineVal := range strings.SplitSeq(jobTxt, "\n") {
+		for parVal := range strings.SplitSeq(lineVal, "<p>") {
+			result = result + fmt.Sprintf(`<p class="my-2">%s</p>`, parVal)
 		}
-	}
-
-	for _, line := range lines {
-		result = result + fmt.Sprintf(`<p class="my-2">%s</p>`, line)
 	}
 
 	result = result + postedLink
