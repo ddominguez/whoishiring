@@ -26,21 +26,34 @@ type HnJob struct {
 
 // TransformedText returns HnJob Text with updated html.
 func (j *HnJob) TransformedText() string {
-	var s string
-	var l []string
-	st := strings.Split(j.Text, "\n")
-	for _, v := range st {
-		sl := strings.Split(v, "<p>")
-		for _, slv := range sl {
-			l = append(l, slv)
+	var result string
+	var lines []string
+	jobTxt := strings.TrimSpace(j.Text)
+
+	postedLink := fmt.Sprintf(
+		`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %s</a></p>`,
+		j.HnId,
+		time.Unix(int64(j.Time), 0),
+	)
+
+	if jobTxt == "" {
+		return postedLink
+	}
+
+	splitLines := strings.Split(jobTxt, "\n")
+	for _, lineVal := range splitLines {
+		splitPars := strings.Split(lineVal, "<p>")
+		for _, parVal := range splitPars {
+			lines = append(lines, parVal)
 		}
 	}
-	for _, v := range l {
-		s = s + fmt.Sprintf(`<p class="my-2">%s</p>`, v)
+
+	for _, line := range lines {
+		result = result + fmt.Sprintf(`<p class="my-2">%s</p>`, line)
 	}
-	tm := time.Unix(int64(j.Time), 0)
-	s = s + fmt.Sprintf(`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %s</a></p>`, j.HnId, tm)
-	return s
+
+	result = result + postedLink
+	return result
 }
 
 type HNRepository interface {

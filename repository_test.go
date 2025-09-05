@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"testing"
 	"time"
 
@@ -102,5 +103,74 @@ func TestHNStore_GetLatestStory_WithNoStories(t *testing.T) {
 	}
 	if story != nil {
 		t.Errorf("expected no story, got %+v", story)
+	}
+}
+
+func TestHnJob_TransformedText(t *testing.T) {
+	nowUnix := time.Now().Unix()
+	job := &HnJob{
+		HnId:   1,
+		Time:   uint64(nowUnix),
+		Seen:   0,
+		Saved:  0,
+		Status: 0,
+		Text:   "Foo.\nBar:<p>Test",
+	}
+
+	expected := fmt.Sprintf(
+		`<p class="my-2">Foo.</p><p class="my-2">Bar:</p><p class="my-2">Test</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		job.HnId,
+		time.Unix(nowUnix, 0),
+	)
+
+	result := job.TransformedText()
+	if result != expected {
+		t.Errorf("expected %s, got %s", expected, result)
+	}
+}
+
+func TestHnJob_TransformedText_FromSingleWord(t *testing.T) {
+	nowUnix := time.Now().Unix()
+	job := &HnJob{
+		HnId:   1,
+		Time:   uint64(nowUnix),
+		Seen:   0,
+		Saved:  0,
+		Status: 0,
+		Text:   "Foo.",
+	}
+
+	expected := fmt.Sprintf(
+		`<p class="my-2">Foo.</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		job.HnId,
+		time.Unix(nowUnix, 0),
+	)
+
+	result := job.TransformedText()
+	if result != expected {
+		t.Errorf("expected %s, got %s", expected, result)
+	}
+}
+
+func TestHnJob_TransformedText_FromEmptyText(t *testing.T) {
+	nowUnix := time.Now().Unix()
+	job := &HnJob{
+		HnId:   1,
+		Time:   uint64(nowUnix),
+		Seen:   0,
+		Saved:  0,
+		Status: 0,
+		Text:   "",
+	}
+
+	expected := fmt.Sprintf(
+		`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		job.HnId,
+		time.Unix(nowUnix, 0),
+	)
+
+	result := job.TransformedText()
+	if result != expected {
+		t.Errorf("expected %s, got %s", expected, result)
 	}
 }
