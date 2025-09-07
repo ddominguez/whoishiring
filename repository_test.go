@@ -108,69 +108,35 @@ func TestHNStore_GetLatestStory_WithNoStories(t *testing.T) {
 
 func TestHnJob_TransformedText(t *testing.T) {
 	nowUnix := time.Now().Unix()
-	job := &HnJob{
-		HnId:   1,
-		Time:   uint64(nowUnix),
-		Seen:   0,
-		Saved:  0,
-		Status: 0,
-		Text:   "Foo.\nBar:<p>Test",
+	tests := []struct {
+		name     string
+		job      *HnJob
+		expected string
+	}{
+		{
+			name:     "text_simple",
+			job:      &HnJob{HnId: 1, Time: uint64(nowUnix), Text: "Foo.\nBar:<p>Test"},
+			expected: `<p class="my-2">Foo.</p><p class="my-2">Bar:</p><p class="my-2">Test</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		},
+		{
+			name:     "text_single_word",
+			job:      &HnJob{HnId: 1, Time: uint64(nowUnix), Text: "Foo."},
+			expected: `<p class="my-2">Foo.</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		},
+		{
+			name:     "text_empty",
+			job:      &HnJob{HnId: 1, Time: uint64(nowUnix), Text: ""},
+			expected: `<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
+		},
 	}
 
-	expected := fmt.Sprintf(
-		`<p class="my-2">Foo.</p><p class="my-2">Bar:</p><p class="my-2">Test</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
-		job.HnId,
-		time.Unix(nowUnix, 0),
-	)
-
-	result := job.TransformedText()
-	if result != expected {
-		t.Errorf("expected %s, got %s", expected, result)
-	}
-}
-
-func TestHnJob_TransformedText_FromSingleWord(t *testing.T) {
-	nowUnix := time.Now().Unix()
-	job := &HnJob{
-		HnId:   1,
-		Time:   uint64(nowUnix),
-		Seen:   0,
-		Saved:  0,
-		Status: 0,
-		Text:   "Foo.",
-	}
-
-	expected := fmt.Sprintf(
-		`<p class="my-2">Foo.</p><p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
-		job.HnId,
-		time.Unix(nowUnix, 0),
-	)
-
-	result := job.TransformedText()
-	if result != expected {
-		t.Errorf("expected %s, got %s", expected, result)
-	}
-}
-
-func TestHnJob_TransformedText_FromEmptyText(t *testing.T) {
-	nowUnix := time.Now().Unix()
-	job := &HnJob{
-		HnId:   1,
-		Time:   uint64(nowUnix),
-		Seen:   0,
-		Saved:  0,
-		Status: 0,
-		Text:   "",
-	}
-
-	expected := fmt.Sprintf(
-		`<p class="my-2"><a href="https://news.ycombinator.com/item?id=%d">Posted: %v</a></p>`,
-		job.HnId,
-		time.Unix(nowUnix, 0),
-	)
-
-	result := job.TransformedText()
-	if result != expected {
-		t.Errorf("expected %s, got %s", expected, result)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.job.TransformedText()
+			expected := fmt.Sprintf(tt.expected, tt.job.HnId, time.Unix(nowUnix, 0))
+			if res != expected {
+				t.Errorf("expected %s, got %s", expected, res)
+			}
+		})
 	}
 }
