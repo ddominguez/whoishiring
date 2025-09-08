@@ -42,8 +42,8 @@ func TestApiJob_StatusToDbValue(t *testing.T) {
 	}
 }
 
-func TestClientGetStory(t *testing.T) {
-	t.Run("is successful", func(t *testing.T) {
+func TestClient_GetStory(t *testing.T) {
+	t.Run("handle_ok_response", func(t *testing.T) {
 		testID := uint64(1)
 		expectedStory := ApiStory{
 			Id:    testID,
@@ -82,7 +82,7 @@ func TestClientGetStory(t *testing.T) {
 		}
 	})
 
-	t.Run("handles server error", func(t *testing.T) {
+	t.Run("handle_server_error", func(t *testing.T) {
 		server := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
@@ -101,7 +101,7 @@ func TestClientGetStory(t *testing.T) {
 		}
 	})
 
-	t.Run("handles not found", func(t *testing.T) {
+	t.Run("handle_not_found", func(t *testing.T) {
 		server := httptest.NewServer(
 			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusNotFound)
