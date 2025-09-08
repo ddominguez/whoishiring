@@ -9,6 +9,39 @@ import (
 	"testing"
 )
 
+func TestApiJob_StatusToDbValue(t *testing.T) {
+	tests := []struct {
+		name     string
+		job      ApiJob
+		expected uint8
+	}{
+		{
+			name:     "status_ok",
+			job:      ApiJob{Id: 1, Text: "test job", Dead: false, Deleted: false},
+			expected: jobStatusOk,
+		},
+		{
+			name:     "status_deleted",
+			job:      ApiJob{Id: 1, Text: "deleted job", Dead: false, Deleted: true},
+			expected: jobStatusDeleted,
+		},
+		{
+			name:     "status_dead",
+			job:      ApiJob{Id: 1, Text: "dead job", Dead: true, Deleted: false},
+			expected: jobStatusDead,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.job.StatusToDbValue()
+			if res != tt.expected {
+				t.Errorf("expected %d, got %d", tt.expected, res)
+			}
+		})
+	}
+}
+
 func TestClientGetStory(t *testing.T) {
 	t.Run("is successful", func(t *testing.T) {
 		testID := uint64(1)
