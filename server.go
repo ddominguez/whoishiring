@@ -132,11 +132,15 @@ func (s *Server) seenHandler(w http.ResponseWriter, r *http.Request) {
 	hnId, err := strconv.ParseUint(pathValue, 10, 64)
 	if err != nil {
 		log.Printf("failed to convert path value:%q to uint64", pathValue)
-		http.NotFound(w, r)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
 	if err := s.store.SetJobAsSeen(hnId); err != nil {
-		log.Println(err)
+		if err.Error() == "zero rows updated" {
+			log.Printf("SetJobAsSeen(%d) did not updates any rows", hnId)
+			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+			return
+		}
 	}
 }

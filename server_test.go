@@ -53,7 +53,7 @@ func TestInitializeNewServer(t *testing.T) {
 	})
 }
 
-func TestServer_seenHandler(t *testing.T) {
+func TestServer_seenHandler_request(t *testing.T) {
 	t.Run("sets_job_as_seen", func(t *testing.T) {
 		db := setupTestDB(t)
 		defer db.Close()
@@ -87,6 +87,32 @@ func TestServer_seenHandler(t *testing.T) {
 		}
 		if updatedJob.Seen != 1 {
 			t.Fatalf("expected seen value to be 1, got: %d", updatedJob.Seen)
+		}
+	})
+
+	t.Run("invalid_path_param", func(t *testing.T) {
+		s := &Server{}
+		mux := s.GetMux()
+		req := httptest.NewRequest("GET", "/api/seen/invalid", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("expected status code %d, got: %d", http.StatusBadRequest, rr.Code)
+		}
+	})
+
+	t.Run("invalid_job_id", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		s := &Server{store: store}
+		mux := s.GetMux()
+		req := httptest.NewRequest("GET", "/api/seen/2", nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+		if rr.Code != http.StatusBadRequest {
+			t.Fatalf("expected status code %d, got: %d", http.StatusBadRequest, rr.Code)
 		}
 	})
 }

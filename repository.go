@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -196,10 +197,19 @@ func (s *HNStore) GetPreviousJobById(hnStoryId, hnJobId uint64) (*HnJob, error) 
 
 // SetJobAsSeen marks a job as seen.
 func (s *HNStore) SetJobAsSeen(hnJobId uint64) error {
-	_, err := s.db.Exec(`UPDATE hiring_job set seen=1 where hn_id=?`, hnJobId)
+	res, err := s.db.Exec(`UPDATE hiring_job set seen=1 where hn_id=?`, hnJobId)
 	if err != nil {
 		return fmt.Errorf("failed to set hiring job as seen: %w", err)
 	}
+
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if affectedRows == 0 {
+		return errors.New("zero rows updated")
+	}
+
 	return nil
 }
 
