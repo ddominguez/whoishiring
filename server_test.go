@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"reflect"
 	"testing"
-	"time"
 )
 
 func TestInitializeNewServer(t *testing.T) {
@@ -12,25 +14,7 @@ func TestInitializeNewServer(t *testing.T) {
 		defer db.Close()
 
 		store := &HNStore{db: db}
-
-		story := &HnStory{
-			HnId:  1,
-			Title: "test story",
-			Time:  uint64(time.Now().Unix()),
-		}
-		if err := store.CreateStory(story); err != nil {
-			t.Fatalf("CreateStory() failed: %v", err)
-		}
-
-		job := &HnJob{
-			HnId:   1,
-			Text:   "test job",
-			Time:   uint64(time.Now().Unix()),
-			Status: jobStatusOk,
-		}
-		if err := store.CreateJob(job, story.HnId); err != nil {
-			t.Fatalf("CreateJob() failed: %v", err)
-		}
+		story, job := setUpStoryWithJob(t, store)
 
 		expectedServer := &Server{
 			store:    store,
@@ -65,6 +49,44 @@ func TestInitializeNewServer(t *testing.T) {
 
 		if server != nil {
 			t.Fatal("expected server to be nil on error")
+		}
+	})
+}
+
+func TestServer_seenHandler(t *testing.T) {
+	t.Run("sets_job_as_seen", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		story, job := setUpStoryWithJob(t, store)
+		if job.Seen != 0 {
+			t.Fatalf("expected seen value to be 0, got: %d", job.Seen)
+		}
+
+		s := &Server{
+			store:    store,
+			hnStory:  story,
+			minJobId: job.HnId,
+			maxJobId: job.HnId,
+		}
+
+		mux := s.GetMux()
+		url := fmt.Sprintf("/api/seen/%d", job.HnId)
+		req := httptest.NewRequest("GET", url, nil)
+		rr := httptest.NewRecorder()
+		mux.ServeHTTP(rr, req)
+
+		if rr.Code != http.StatusOK {
+			t.Fatalf("expected status code %d, got: %d", http.StatusOK, rr.Code)
+		}
+
+		updatedJob := queryTestJobById(t, store, job.HnId)
+		if updatedJob.HnId != job.HnId {
+			t.Fatalf("expected job id %d, got: %d", job.HnId, updatedJob.HnId)
+		}
+		if updatedJob.Seen != 1 {
+			t.Fatalf("expected seen value to be 1, got: %d", updatedJob.Seen)
 		}
 	})
 }

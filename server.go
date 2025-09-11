@@ -49,11 +49,17 @@ func InitializeNewServer(store HNRepository) (*Server, error) {
 	return NewServer(store, latestStory, minJobId, maxJobId), nil
 }
 
-// Run starts the web server.
-func (s *Server) Run() {
+// GetMux creates a new serve mux and registers its handler funcs.
+func (s *Server) GetMux() *http.ServeMux {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", s.indexHandler)
 	mux.HandleFunc("GET /api/seen/{hnId}", s.seenHandler)
+	return mux
+}
+
+// Run starts the web server.
+func (s *Server) Run() {
+	mux := s.GetMux()
 	fmt.Println("Listening on http://localhost:8080")
 	log.Fatal(http.ListenAndServe(":8080", mux))
 }
