@@ -11,7 +11,7 @@ import (
 )
 
 type Server struct {
-	store    HNRepository
+	store    *HNStore
 	hnStory  *HnStory
 	minJobId uint64
 	maxJobId uint64
@@ -19,7 +19,7 @@ type Server struct {
 
 // NewServer creates a new Server.
 func NewServer(
-	store HNRepository,
+	store *HNStore,
 	latestStory *HnStory,
 	minJobId, maxJobId uint64,
 ) *Server {
@@ -32,7 +32,7 @@ func NewServer(
 }
 
 // InitializeNewServer creates a Server configured with the latest story and its job ID range.
-func InitializeNewServer(store HNRepository) (*Server, error) {
+func InitializeNewServer(store *HNStore) (*Server, error) {
 	latestStory, err := store.GetLatestStory()
 	if err != nil {
 		if err == sql.ErrNoRows {

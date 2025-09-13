@@ -50,18 +50,6 @@ func (j *HnJob) TransformedText() string {
 	return result
 }
 
-type HNRepository interface {
-	CreateStory(story *HnStory) error
-	CreateJob(job *HnJob, hnStoryId uint64) error
-	GetJobIdsByStoryId(hnStoryId uint64) (map[uint64]bool, error)
-	GetLatestStory() (*HnStory, error)
-	GetFirstJob(hnStoryId uint64) (*HnJob, error)
-	GetNextJobById(hnStoryId, hnJobId uint64) (*HnJob, error)
-	GetPreviousJobById(hnStoryId, hnJobId uint64) (*HnJob, error)
-	GetMinMaxJobIDs(hnJobId uint64) (uint64, uint64, error)
-	SetJobAsSeen(hnJobId uint64) error
-}
-
 type HNStore struct {
 	db *sqlx.DB
 }
@@ -214,6 +202,6 @@ func (s *HNStore) SetJobAsSeen(hnJobId uint64) error {
 }
 
 // NewHNStore creates a new HNStore.
-func NewHNStore(db *sqlx.DB) HNRepository {
+func NewHNStore(db *sqlx.DB) *HNStore {
 	return &HNStore{db: db}
 }

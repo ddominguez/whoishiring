@@ -8,7 +8,7 @@ import (
 )
 
 type SyncProcess struct {
-	store  HNRepository
+	store  *HNStore
 	client *Client
 }
 
@@ -105,7 +105,7 @@ func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
 	return nil
 }
 
-func NewSyncProcess(store HNRepository, client *Client) *SyncProcess {
+func NewSyncProcess(store *HNStore, client *Client) *SyncProcess {
 	return &SyncProcess{
 		store:  store,
 		client: client,
