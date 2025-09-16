@@ -3,6 +3,8 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 )
@@ -77,6 +79,53 @@ func TestHNStore_GetLatestStory_WithNoStories(t *testing.T) {
 	if story != nil {
 		t.Errorf("expected no story, got %+v", story)
 	}
+}
+
+func TestStore_GetJobBeforeID(t *testing.T) {
+	t.Run("has_job_before_current_job", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		story, job1 := setUpStoryWithJob(t, store)
+
+		wantJob2 := &HnJob{
+			HnId:   2,
+			Text:   "test job 2",
+			Time:   job1.Time + 100,
+			Status: jobStatusOk,
+		}
+		if err := store.CreateJob(wantJob2, story.HnId); err != nil {
+			t.Fatalf("CreateJob() failed: %v", err)
+		}
+
+		gotJob, err := store.GetJobBeforeID(story.HnId, job1.HnId)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !reflect.DeepEqual(gotJob, wantJob2) {
+			t.Fatalf("expected job %+v, got %+v", wantJob2, gotJob)
+		}
+	})
+
+	t.Run("no_job_before_current_job", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		story, job1 := setUpStoryWithJob(t, store)
+
+		gotJob, err := store.GetJobBeforeID(story.HnId, job1.HnId)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), sql.ErrNoRows.Error()) {
+			t.Fatalf("expected error %v, got %v", sql.ErrNoRows, err)
+		}
+		if gotJob != nil {
+			t.Fatalf("expected job to be nil, got %+v", gotJob)
+		}
+	})
 }
 
 func TestHnJob_TransformedText(t *testing.T) {

@@ -151,8 +151,8 @@ func (s *HNStore) GetFirstJob(hnStoryId uint64) (*HnJob, error) {
 	return &job, nil
 }
 
-// GetNextJobById retrieves the next WhoIsHiring job.
-func (s *HNStore) GetNextJobById(hnStoryId, hnJobId uint64) (*HnJob, error) {
+// GetJobAfterID retrieves the next WhoIsHiring job.
+func (s *HNStore) GetJobAfterID(hnStoryId, hnJobId uint64) (*HnJob, error) {
 	var job HnJob
 
 	query := `SELECT hn_id, seen, saved, text, time
@@ -167,17 +167,17 @@ func (s *HNStore) GetNextJobById(hnStoryId, hnJobId uint64) (*HnJob, error) {
 	return &job, nil
 }
 
-// GetNextJobById retrieves the previous WhoIsHiring job.
-func (s *HNStore) GetPreviousJobById(hnStoryId, hnJobId uint64) (*HnJob, error) {
+// GetJobBeforeID retrieves the previous WhoIsHiring job.
+func (s *HNStore) GetJobBeforeID(hnStoryId, hnJobId uint64) (*HnJob, error) {
 	var job HnJob
 
-	query := `SELECT hn_id, seen, saved, text, time
+	query := `SELECT hn_id, seen, saved, text, time, status
             FROM hiring_job
             WHERE hiring_story_hn_id=? and status=? and hn_id > ?
             ORDER BY hn_id ASC
             Limit 1`
 	if err := s.db.Get(&job, query, hnStoryId, jobStatusOk, hnJobId); err != nil {
-		return nil, fmt.Errorf("failed to select previous hiring job: %w", err)
+		return nil, fmt.Errorf("failed to select job before id %d: %w", hnJobId, err)
 	}
 
 	return &job, nil

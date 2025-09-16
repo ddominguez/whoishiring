@@ -36,7 +36,7 @@ func setupTestDB(t *testing.T) *sqlx.DB {
 func setUpStoryWithJob(t *testing.T, store *HNStore) (*HnStory, *HnJob) {
 	story := &HnStory{
 		HnId:  1,
-		Title: "test story",
+		Title: "test story 1",
 		Time:  uint64(time.Now().Unix()),
 	}
 	if err := store.CreateStory(story); err != nil {
@@ -45,7 +45,7 @@ func setUpStoryWithJob(t *testing.T, store *HNStore) (*HnStory, *HnJob) {
 
 	job := &HnJob{
 		HnId:   1,
-		Text:   "test job",
+		Text:   "test job 1",
 		Time:   uint64(time.Now().Unix()),
 		Status: jobStatusOk,
 	}

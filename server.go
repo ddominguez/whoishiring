@@ -93,9 +93,9 @@ func (s *Server) indexHandler(w http.ResponseWriter, r *http.Request) {
 	var hj *HnJob
 	var err error
 	if after == 0 && before > 0 {
-		hj, err = s.store.GetPreviousJobById(s.hnStory.HnId, before)
+		hj, err = s.store.GetJobBeforeID(s.hnStory.HnId, before)
 	} else if after > 0 && before == 0 {
-		hj, err = s.store.GetNextJobById(s.hnStory.HnId, after)
+		hj, err = s.store.GetJobAfterID(s.hnStory.HnId, after)
 	} else {
 		hj, err = s.store.GetFirstJob(s.hnStory.HnId)
 	}
