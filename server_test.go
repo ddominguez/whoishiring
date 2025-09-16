@@ -21,7 +21,7 @@ func TestInitializeNewServer(t *testing.T) {
 			t.Fatalf("expected no error, got: %v", err)
 		}
 		if server.store != store {
-			t.Fatalf("expected store %+v, got %+v", store, store)
+			t.Fatalf("expected store %+v, got %+v", store, server.store)
 		}
 		if !reflect.DeepEqual(server.hnStory, story) {
 			t.Fatalf("expected story %+v, got %+v", story, server.hnStory)
