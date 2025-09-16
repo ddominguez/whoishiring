@@ -16,19 +16,21 @@ func TestInitializeNewServer(t *testing.T) {
 		store := &HNStore{db: db}
 		story, job := setUpStoryWithJob(t, store)
 
-		expectedServer := &Server{
-			store:    store,
-			hnStory:  story,
-			minJobId: job.HnId,
-			maxJobId: job.HnId,
-		}
-
 		server, err := InitializeNewServer(store)
 		if err != nil {
 			t.Fatalf("expected no error, got: %v", err)
 		}
-		if !reflect.DeepEqual(*server, *expectedServer) {
-			t.Fatalf("expected server %+v, got %+v", *expectedServer, *server)
+		if server.store != store {
+			t.Fatalf("expected store %+v, got %+v", store, store)
+		}
+		if !reflect.DeepEqual(server.hnStory, story) {
+			t.Fatalf("expected story %+v, got %+v", story, server.hnStory)
+		}
+		if server.minJobId != job.HnId {
+			t.Fatalf("expected minJobId %+v, got %+v", job.HnId, server.minJobId)
+		}
+		if server.maxJobId != job.HnId {
+			t.Fatalf("expected maxJobId %+v, got %+v", job.HnId, server.maxJobId)
 		}
 	})
 
