@@ -155,7 +155,7 @@ func (s *HNStore) GetFirstJob(hnStoryId uint64) (*HnJob, error) {
 func (s *HNStore) GetJobAfterID(hnStoryId, hnJobId uint64) (*HnJob, error) {
 	var job HnJob
 
-	query := `SELECT hn_id, seen, saved, text, time
+	query := `SELECT hn_id, seen, saved, text, time, status
             FROM hiring_job
             WHERE hiring_story_hn_id=? and status=? and hn_id < ?
             ORDER BY hn_id DESC

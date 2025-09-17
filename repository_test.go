@@ -87,24 +87,24 @@ func TestStore_GetJobBeforeID(t *testing.T) {
 		defer db.Close()
 
 		store := &HNStore{db: db}
-		story, job1 := setUpStoryWithJob(t, store)
+		story, earliestJob := setUpStoryWithJob(t, store)
 
-		wantJob2 := &HnJob{
+		latestJob := &HnJob{
 			HnId:   2,
 			Text:   "test job 2",
-			Time:   job1.Time + 100,
+			Time:   earliestJob.Time + 100,
 			Status: jobStatusOk,
 		}
-		if err := store.CreateJob(wantJob2, story.HnId); err != nil {
+		if err := store.CreateJob(latestJob, story.HnId); err != nil {
 			t.Fatalf("CreateJob() failed: %v", err)
 		}
 
-		gotJob, err := store.GetJobBeforeID(story.HnId, job1.HnId)
+		gotJob, err := store.GetJobBeforeID(story.HnId, earliestJob.HnId)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		if !reflect.DeepEqual(gotJob, wantJob2) {
-			t.Fatalf("expected job %+v, got %+v", wantJob2, gotJob)
+		if !reflect.DeepEqual(gotJob, latestJob) {
+			t.Fatalf("expected job %+v, got %+v", latestJob, gotJob)
 		}
 	})
 
@@ -113,9 +113,56 @@ func TestStore_GetJobBeforeID(t *testing.T) {
 		defer db.Close()
 
 		store := &HNStore{db: db}
-		story, job1 := setUpStoryWithJob(t, store)
+		story, earliestJob := setUpStoryWithJob(t, store)
 
-		gotJob, err := store.GetJobBeforeID(story.HnId, job1.HnId)
+		gotJob, err := store.GetJobBeforeID(story.HnId, earliestJob.HnId)
+		if err == nil {
+			t.Fatalf("expected error, got nil")
+		}
+		if !strings.Contains(err.Error(), sql.ErrNoRows.Error()) {
+			t.Fatalf("expected error %v, got %v", sql.ErrNoRows, err)
+		}
+		if gotJob != nil {
+			t.Fatalf("expected job to be nil, got %+v", gotJob)
+		}
+	})
+}
+
+func TestStore_GetJobAfterID(t *testing.T) {
+	t.Run("has_job_after_current_job", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		story, earliestJob := setUpStoryWithJob(t, store)
+
+		latestJob := &HnJob{
+			HnId:   2,
+			Text:   "test job 2",
+			Time:   earliestJob.Time + 100,
+			Status: jobStatusOk,
+		}
+		if err := store.CreateJob(latestJob, story.HnId); err != nil {
+			t.Fatalf("CreateJob() failed: %v", err)
+		}
+
+		gotJob, err := store.GetJobAfterID(story.HnId, latestJob.HnId)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if !reflect.DeepEqual(gotJob, earliestJob) {
+			t.Fatalf("expected job %+v, got %+v", earliestJob, gotJob)
+		}
+	})
+
+	t.Run("no_job_after_current_job", func(t *testing.T) {
+		db := setupTestDB(t)
+		defer db.Close()
+
+		store := &HNStore{db: db}
+		story, earliestJob := setUpStoryWithJob(t, store)
+
+		gotJob, err := store.GetJobAfterID(story.HnId, earliestJob.HnId)
 		if err == nil {
 			t.Fatalf("expected error, got nil")
 		}
