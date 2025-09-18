@@ -18,8 +18,12 @@ func (s *SyncProcess) Run() error {
 
 	submissionIds, err := s.client.GetWhoIsHiringSubmissionIds()
 
-	// The story id we want should be in the first three items
-	hiringStory, err := s.client.FindWhoIsHiringStory(submissionIds[0:3])
+	// Hacker News will usually post 3 new stories at the beginning of the month:
+	// `Who is hiring?`, `Freelancer? Seeking freelancer?`, and `Who wants to be hired?`
+	// An assumption is being made that the latest `Who is hiring?` story is one
+	// of the first 3 submission IDs.
+	maxSubmissions := 3
+	hiringStory, err := s.client.FindWhoIsHiringStory(submissionIds[0:maxSubmissions])
 	if err != nil {
 		return fmt.Errorf("failed to find who is hiring story: %w", err)
 	}
