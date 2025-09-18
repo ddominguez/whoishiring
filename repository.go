@@ -10,6 +10,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
+var ZeroRowsUpdated = errors.New("zero rows updated")
+
 type HnStory struct {
 	HnId  uint64 `db:"hn_id"`
 	Title string `db:"title"`
@@ -195,7 +197,7 @@ func (s *HNStore) SetJobAsSeen(hnJobId uint64) error {
 		return fmt.Errorf("failed to get rows affected: %w", err)
 	}
 	if affectedRows == 0 {
-		return errors.New("zero rows updated")
+		return ZeroRowsUpdated
 	}
 
 	return nil

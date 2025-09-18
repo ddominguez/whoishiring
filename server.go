@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -137,7 +138,7 @@ func (s *Server) seenHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := s.store.SetJobAsSeen(hnId); err != nil {
-		if err.Error() == "zero rows updated" {
+		if errors.Is(err, ZeroRowsUpdated) {
 			log.Printf("SetJobAsSeen(%d) did not updates any rows", hnId)
 			http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 			return
