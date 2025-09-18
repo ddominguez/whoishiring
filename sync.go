@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"slices"
 	"sync"
 )
 
@@ -26,39 +27,39 @@ func (s *SyncProcess) Run() error {
 	// An assumption is being made that the latest `Who is hiring?` story is one
 	// of the first 3 submission IDs.
 	maxSubmissions := 3
-	hiringStory, err := s.client.FindWhoIsHiringStory(submissionIds[0:maxSubmissions])
-	if err != nil {
-		return fmt.Errorf("failed to find who is hiring story: %w", err)
-	}
+	submissionsToSearch := submissionIds[0:maxSubmissions]
 
 	existingStory, err := s.store.GetLatestStory()
 	if err != nil && err != sql.ErrNoRows {
 		return err
 	}
 
-	var hsHnId uint64
-	if existingStory != nil && existingStory.HnId == hiringStory.Id {
-		log.Printf("found existing hiring story: %d", existingStory.HnId)
-		hsHnId = existingStory.HnId
-	} else {
-		err := s.store.CreateStory(&HnStory{
-			HnId:  hiringStory.Id,
-			Title: hiringStory.Title,
-			Time:  hiringStory.Time,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to create hiring story: %w", err)
-		}
-		log.Println("new hiring story found and created")
-		hsHnId = hiringStory.Id
+	// existingStory is still the latest story
+	if existingStory != nil && slices.Contains(submissionsToSearch, existingStory.HnId) {
+		log.Printf("found existing `Who is Hiring?` story: %d", existingStory.HnId)
+		return s.getNewJobs(existingStory.HnId)
 	}
 
-	return s.getNewJobs(hsHnId)
+	newStory, err := s.client.FindWhoIsHiringStory(submissionsToSearch)
+	if err != nil {
+		return fmt.Errorf("failed to find `Who is Hiring?` story: %w", err)
+	}
+
+	if err := s.store.CreateStory(&HnStory{
+		HnId:  newStory.Id,
+		Title: newStory.Title,
+		Time:  newStory.Time,
+	}); err != nil {
+		return fmt.Errorf("failed to create `Who is Hiring?` story: %w", err)
+	}
+
+	log.Println("new `Who is Hiring?` story found and created")
+	return s.getNewJobs(newStory.Id)
 }
 
 // getNewJobs will fetch and save new jobs for a given hiring story.
 func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
-	log.Printf("process jobs for hiring story id %d", hnStoryId)
+	log.Printf("process jobs for `Who is Hiring?` story id %d", hnStoryId)
 
 	hs, err := s.client.GetStory(hnStoryId)
 	if err != nil {
