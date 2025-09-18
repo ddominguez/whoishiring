@@ -17,6 +17,9 @@ func (s *SyncProcess) Run() error {
 	log.Println("starting data sync...")
 
 	submissionIds, err := s.client.GetWhoIsHiringSubmissionIds()
+	if err != nil {
+		return err
+	}
 
 	// Hacker News will usually post 3 new stories at the beginning of the month:
 	// `Who is hiring?`, `Freelancer? Seeking freelancer?`, and `Who wants to be hired?`
