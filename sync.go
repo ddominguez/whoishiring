@@ -26,7 +26,7 @@ func (s *SyncProcess) Run() error {
 
 	storyID, err := s.getLatestStoryID()
 	if err != nil {
-		return nil
+		return err
 	}
 
 	if err := s.getNewJobs(storyID); err != nil {
