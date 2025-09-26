@@ -13,36 +13,57 @@ type SyncProcess struct {
 	client *Client
 }
 
-// Run will fetch and save the latest WhoIsHiring story and jobs.
+func NewSyncProcess(store *HNStore, client *Client) *SyncProcess {
+	return &SyncProcess{
+		store:  store,
+		client: client,
+	}
+}
+
+// Run will fetch and save the latest "Who is Hiring?" story and jobs.
 func (s *SyncProcess) Run() error {
 	log.Println("starting data sync...")
 
-	submissionIds, err := s.client.GetWhoIsHiringSubmissionIds()
+	storyID, err := s.getLatestStoryID()
 	if err != nil {
+		return nil
+	}
+
+	if err := s.getNewJobs(storyID); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// getLatestStoryID will return the latest "Who is Hiring?" story ID
+func (s *SyncProcess) getLatestStoryID() (uint64, error) {
+	submissionIds, err := s.client.GetWhoIsHiringSubmissionIds()
+	if err != nil {
+		return 0, err
+	}
+
 	// Hacker News will usually post 3 new stories at the beginning of the month:
-	// `Who is hiring?`, `Freelancer? Seeking freelancer?`, and `Who wants to be hired?`
-	// An assumption is being made that the latest `Who is hiring?` story is one
+	// "Who is hiring?", "Freelancer? Seeking freelancer?", and "Who wants to be hired?"
+	// An assumption is being made that the latest "Who is hiring?" story is one
 	// of the first 3 submission IDs.
 	maxSubmissions := 3
 	submissionsToSearch := submissionIds[0:maxSubmissions]
 
 	existingStory, err := s.store.GetLatestStory()
 	if err != nil && err != sql.ErrNoRows {
-		return err
+		return 0, err
 	}
 
 	// existingStory is still the latest story
 	if existingStory != nil && slices.Contains(submissionsToSearch, existingStory.HnId) {
-		log.Printf("found existing `Who is Hiring?` story: %d", existingStory.HnId)
-		return s.getNewJobs(existingStory.HnId)
+		log.Printf("found existing 'Who is Hiring?' story: %d", existingStory.HnId)
+		return existingStory.HnId, nil
 	}
 
 	newStory, err := s.client.FindWhoIsHiringStory(submissionsToSearch)
 	if err != nil {
-		return fmt.Errorf("failed to find `Who is Hiring?` story: %w", err)
+		return 0, err
 	}
 
 	if err := s.store.CreateStory(&HnStory{
@@ -50,16 +71,16 @@ func (s *SyncProcess) Run() error {
 		Title: newStory.Title,
 		Time:  newStory.Time,
 	}); err != nil {
-		return fmt.Errorf("failed to create `Who is Hiring?` story: %w", err)
+		return 0, err
 	}
 
-	log.Println("new `Who is Hiring?` story found and created")
-	return s.getNewJobs(newStory.Id)
+	log.Println("new 'Who is Hiring?' story found and created")
+	return newStory.Id, nil
 }
 
 // getNewJobs will fetch and save new jobs for a given hiring story.
 func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
-	log.Printf("process jobs for `Who is Hiring?` story id %d", hnStoryId)
+	log.Printf("process jobs for 'Who is Hiring?' story id %d", hnStoryId)
 
 	hs, err := s.client.GetStory(hnStoryId)
 	if err != nil {
@@ -111,11 +132,4 @@ func (s *SyncProcess) getNewJobs(hnStoryId uint64) error {
 
 	wg.Wait()
 	return nil
-}
-
-func NewSyncProcess(store *HNStore, client *Client) *SyncProcess {
-	return &SyncProcess{
-		store:  store,
-		client: client,
-	}
 }
