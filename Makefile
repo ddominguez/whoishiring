@@ -3,11 +3,14 @@ MIGRATIONS_DIR=./migrations
 
 .PHONY: run
 
+build:
+	go build -o whoishiring
+
 run:
-	go run . -serve
+	./whoishiring -serve
 
 sync:
-	go run . -sync
+	./whoishiring -sync
 
 test:
 	go test -v
