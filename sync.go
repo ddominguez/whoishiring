@@ -6,6 +6,7 @@ import (
 	"log"
 	"slices"
 	"sync"
+	"time"
 )
 
 type SyncProcess struct {
@@ -43,9 +44,11 @@ func (s *SyncProcess) getLatestStoryID() (uint64, error) {
 		return 0, err
 	}
 
-	// Hacker News will usually post 3 new stories at the beginning of the month:
-	// "Who is hiring?", "Freelancer? Seeking freelancer?", and "Who wants to be hired?"
-	// An assumption is being made that the latest "Who is hiring?" story is one
+	// Hacker News will usually post 2 new stories at the beginning of the month:
+	// "Who is hiring?", and "Who wants to be hired?". There used to be a post
+	// for freelancers but it was removed. Not sure if they will bring it back.
+	// https://news.ycombinator.com/item?id=46167746
+	// An assumption is being made that the current "Who is hiring?" story is one
 	// of the first 3 submission IDs.
 	maxSubmissions := 3
 	submissionsToSearch := submissionIds[0:maxSubmissions]
@@ -55,8 +58,9 @@ func (s *SyncProcess) getLatestStoryID() (uint64, error) {
 		return 0, err
 	}
 
-	// existingStory is still the latest story
-	if existingStory != nil && slices.Contains(submissionsToSearch, existingStory.HnId) {
+	if existingStory != nil &&
+		existingStory.IsInSameMonth(time.Now()) &&
+		slices.Contains(submissionsToSearch, existingStory.HnId) {
 		log.Printf("found existing 'Who is Hiring?' story: %d", existingStory.HnId)
 		return existingStory.HnId, nil
 	}
@@ -64,6 +68,15 @@ func (s *SyncProcess) getLatestStoryID() (uint64, error) {
 	newStory, err := s.client.FindWhoIsHiringStory(submissionsToSearch)
 	if err != nil {
 		return 0, err
+	}
+
+	// latest story fetched is still the saved existing story??
+	// this will most likely be true if we sync before the latest story has been
+	// posted. Or if there has been some other unkown issue. New stories aren't usually
+	// posted on the weekends.
+	if newStory.Id == existingStory.HnId {
+		log.Printf("new story hasn't been posted. using existing 'Whois is Hiring?' story: %d", existingStory.HnId)
+		return existingStory.HnId, nil
 	}
 
 	if err := s.store.CreateStory(&HnStory{

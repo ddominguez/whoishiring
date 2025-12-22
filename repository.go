@@ -18,6 +18,13 @@ type HnStory struct {
 	Time  uint64 `db:"time"`
 }
 
+// IsInSameMonth returns true if HnStory is in the same month as the target time
+func (s HnStory) IsInSameMonth(t time.Time) bool {
+	storyTime := time.Unix(int64(s.Time), 0).UTC()
+	t = t.UTC()
+	return storyTime.Year() == t.Year() && storyTime.Month() == t.Month()
+}
+
 type HnJob struct {
 	HnId   uint64 `db:"hn_id"`
 	Text   string `db:"text"`

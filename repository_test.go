@@ -209,3 +209,62 @@ func TestHnJob_TransformedText(t *testing.T) {
 		})
 	}
 }
+
+func TestHnStory_IsInSameMonth(t *testing.T) {
+	tests := []struct {
+		name       string
+		story      *HnStory
+		targetTime time.Time
+		expected   bool
+	}{
+		{
+			name: "same_year_same_month",
+			story: &HnStory{
+				HnId:  1,
+				Title: "test story",
+				Time:  uint64(time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC).Unix()),
+			},
+			targetTime: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+			expected:   true,
+		},
+		{
+			name: "same_year_different_month",
+			story: &HnStory{
+				HnId:  1,
+				Title: "test story",
+				Time:  uint64(time.Date(2025, 4, 1, 0, 0, 0, 0, time.UTC).Unix()),
+			},
+			targetTime: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+			expected:   false,
+		},
+		{
+			name: "different_year_same_month",
+			story: &HnStory{
+				HnId:  1,
+				Title: "test story",
+				Time:  uint64(time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC).Unix()),
+			},
+			targetTime: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+			expected:   false,
+		},
+		{
+			name: "different_year_different_month",
+			story: &HnStory{
+				HnId:  1,
+				Title: "test story",
+				Time:  uint64(time.Date(2024, 12, 1, 0, 0, 0, 0, time.UTC).Unix()),
+			},
+			targetTime: time.Date(2025, 3, 1, 0, 0, 0, 0, time.UTC),
+			expected:   false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := tt.story.IsInSameMonth(tt.targetTime)
+			if res != tt.expected {
+				t.Errorf("expected %v, got %v", tt.expected, res)
+			}
+		})
+	}
+}
