@@ -12,6 +12,9 @@ run:
 sync:
 	./whoishiring -sync
 
+verify:
+	./whoishiring -verify
+
 test:
 	go test -v
 

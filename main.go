@@ -11,6 +11,7 @@ import (
 func main() {
 	sync := flag.Bool("sync", false, "Sync who is hiring data")
 	serve := flag.Bool("serve", false, "Run server")
+	verify := flag.Bool("verify", false, "Verify saved jobs are still OK")
 	flag.Parse()
 
 	db, err := sqlx.Open("sqlite3", "whoishiring.db")
@@ -24,12 +25,20 @@ func main() {
 	}
 
 	store := NewHNStore(db)
+	baseUrl := "https://hacker-news.firebaseio.com/v0"
 
 	if *sync {
-		baseUrl := "https://hacker-news.firebaseio.com/v0"
 		client := NewClient(baseUrl)
 		sp := NewSyncProcess(store, client)
 		if err := sp.Run(); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	if *verify {
+		client := NewClient(baseUrl)
+		v := NewVerifyProcess(store, client)
+		if err := v.Run(); err != nil {
 			log.Fatal(err)
 		}
 	}

@@ -111,6 +111,28 @@ func (s *HNStore) GetJobIdsByStoryId(hnStoryId uint64) (map[uint64]bool, error) 
 	return ids, nil
 }
 
+// GetCurrentOkJobIds returns job ids with OK status for given story.
+func (s *HNStore) GetOkJobIdsByStoryId(hnStoryId uint64) (map[uint64]bool, error) {
+	query := `SELECT hn_id FROM hiring_job WHERE hiring_story_hn_id=? and status=?`
+
+	rows, err := s.db.Query(query, hnStoryId, jobStatusOk)
+	if err != nil {
+		return nil, fmt.Errorf("failed to select hiring job IDs: %w", err)
+	}
+	defer rows.Close()
+
+	ids := make(map[uint64]bool)
+	for rows.Next() {
+		var id uint64
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("failed to scan hiring job ID: %w", err)
+		}
+		ids[id] = true
+	}
+
+	return ids, nil
+}
+
 // GetLatestStory retrieves the latest hiring story from the database.
 func (s *HNStore) GetLatestStory() (*HnStory, error) {
 	var story HnStory
@@ -197,6 +219,23 @@ func (s *HNStore) SetJobAsSeen(hnJobId uint64) error {
 	res, err := s.db.Exec(`UPDATE hiring_job set seen=1 where hn_id=?`, hnJobId)
 	if err != nil {
 		return fmt.Errorf("failed to set hiring job as seen: %w", err)
+	}
+
+	affectedRows, err := res.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("failed to get rows affected: %w", err)
+	}
+	if affectedRows == 0 {
+		return ZeroRowsUpdated
+	}
+
+	return nil
+}
+
+func (s *HNStore) SetJobStatus(hnJobId uint64, status uint8) error {
+	res, err := s.db.Exec(`UPDATE hiring_job set status=? where hn_id=?`, status, hnJobId)
+	if err != nil {
+		return fmt.Errorf("failed to set hiring job status: %w", err)
 	}
 
 	affectedRows, err := res.RowsAffected()
